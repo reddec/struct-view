@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/dave/jennifer/jen"
 	"github.com/jessevdk/go-flags"
+	structview "github.com/reddec/struct-view"
 	"os"
 	"path/filepath"
-	structview "struct-view"
 )
 
 type Config struct {
