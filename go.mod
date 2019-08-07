@@ -1,4 +1,4 @@
-module struct-view
+module github.com/reddec/struct-view
 
 go 1.12
 
