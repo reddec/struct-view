@@ -15,7 +15,8 @@ type Config struct {
 	Private    bool   `short:"P" long:"private" env:"PRIVATE" description:"Make generated event structures be private by prefix 'event'"`
 	EventBus   string `long:"event-bus" env:"EVENT_BUS" description:"Generate structure that aggregates all events" default:""`
 	Mirror     bool   `short:"m" long:"mirror" env:"MIRROR" description:"Mirror all events to the universal emitter"`
-	FromMirror bool   `long:"from-mirror" env:"FROM_MIRROR" description:"Create producer events as from mirror (only for event bus)"`
+	FromMirror bool   `short:"f" long:"from-mirror" env:"FROM_MIRROR" description:"Create producer events as from mirror (only for event bus)"`
+	IgnoreCase bool   `short:"i" long:"ignore-case" env:"IGNORE_CASE" description:"Ignore event case for universal source (--from-mirror)"`
 	Args       struct {
 		Directory string `help:"source directory"`
 	} `positional-args:"yes"`

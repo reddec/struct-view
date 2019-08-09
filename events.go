@@ -11,12 +11,13 @@ import (
 )
 
 type EventGenerator struct {
-	WithBus    bool
-	WithMirror bool
-	FromMirror bool
-	BusName    string
-	MirrorType string
-	Private    bool
+	WithBus        bool
+	WithMirror     bool
+	FromMirror     bool
+	FromIgnoreCase bool
+	BusName        string
+	MirrorType     string
+	Private        bool
 }
 
 func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
@@ -132,29 +133,56 @@ func (eg EventGenerator) generateBus(typeName string, events, types []string) je
 
 func (eg EventGenerator) generateBusSource(eventBus string, events []string, types []*Struct) jen.Code {
 	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Emit").Params(jen.Id("eventName").String(), jen.Id("payload").Interface()).BlockFunc(func(group *jen.Group) {
-		group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
-			for i, eventName := range events {
-				eventType := types[i]
-				sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
-					evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-						casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
-					}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-						casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+		if eg.FromIgnoreCase {
+			group.Switch(jen.Qual("strings", "ToUpper").Call(jen.Id("eventName"))).BlockFunc(func(sw *jen.Group) {
+				for i, eventName := range events {
+					eventType := types[i]
+					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
+						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+							casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
+						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+							casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+						})
 					})
-				})
-			}
-		})
+				}
+			})
+		} else {
+			group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
+				for i, eventName := range events {
+					eventType := types[i]
+					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
+						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+							casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
+						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+							casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+						})
+					})
+				}
+			})
+		}
 	}).Line()
 
 	code.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Payload").Params(jen.Id("eventName").String()).Interface().BlockFunc(func(group *jen.Group) {
-		group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
-			for i, eventName := range events {
-				eventType := types[i]
-				sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
-					evGroup.Return().Op("&").Add(eventType.Qual()).Values()
-				})
-			}
-		})
+		if eg.FromIgnoreCase {
+			group.Switch(jen.Qual("strings", "ToUpper").Call(jen.Id("eventName"))).BlockFunc(func(sw *jen.Group) {
+				for i, eventName := range events {
+					eventType := types[i]
+					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
+						evGroup.Return().Op("&").Add(eventType.Qual()).Values()
+					})
+				}
+			})
+
+		} else {
+			group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
+				for i, eventName := range events {
+					eventType := types[i]
+					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
+						evGroup.Return().Op("&").Add(eventType.Qual()).Values()
+					})
+				}
+			})
+		}
 		group.Return().Nil()
 	})
 	return code

@@ -14,10 +14,11 @@ type event struct {
 
 func TestEventGenerator_Generate(t *testing.T) {
 	eg := EventGenerator{
-		BusName:    "Events",
-		WithMirror: true,
-		WithBus:    true,
-		FromMirror: true,
+		BusName:        "Events",
+		WithMirror:     true,
+		WithBus:        true,
+		FromMirror:     true,
+		FromIgnoreCase: true,
 	}
 	code, err := eg.Generate(".")
 	if err != nil {
