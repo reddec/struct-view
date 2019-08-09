@@ -13,6 +13,7 @@ import (
 type EventGenerator struct {
 	WithBus    bool
 	WithMirror bool
+	FromMirror bool
 	BusName    string
 	MirrorType string
 	Private    bool
@@ -32,6 +33,7 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 
 	var events []string
 	var types []string
+	var payloads []*Struct
 
 	for _, def := range p {
 		ast.Inspect(def, func(node ast.Node) bool {
@@ -64,6 +66,7 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 						code.Add(jen.Line())
 						events = append(events, event.Name)
 						types = append(types, typeName)
+						payloads = append(payloads, info)
 					}
 				}
 				comment = ""
@@ -78,6 +81,10 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 	}
 	if eg.WithMirror && eg.WithBus {
 		code.Add(eg.generateMirrorConstructorForBus(eg.MirrorType, eg.BusName, events))
+		code.Add(jen.Line())
+	}
+	if eg.FromMirror && eg.WithBus {
+		code.Add(eg.generateBusSource(eg.BusName, events, payloads))
 		code.Add(jen.Line())
 	}
 
@@ -121,6 +128,36 @@ func (eg EventGenerator) generateBus(typeName string, events, types []string) je
 			group.Id(event).Id(types[i])
 		}
 	})
+}
+
+func (eg EventGenerator) generateBusSource(eventBus string, events []string, types []*Struct) jen.Code {
+	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Emit").Params(jen.Id("eventName").String(), jen.Id("payload").Interface()).BlockFunc(func(group *jen.Group) {
+		group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
+			for i, eventName := range events {
+				eventType := types[i]
+				sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
+					evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+						casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
+					}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+						casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+					})
+				})
+			}
+		})
+	}).Line()
+
+	code.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Payload").Params(jen.Id("eventName").String()).Interface().BlockFunc(func(group *jen.Group) {
+		group.Switch(jen.Id("eventName")).BlockFunc(func(sw *jen.Group) {
+			for i, eventName := range events {
+				eventType := types[i]
+				sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
+					evGroup.Return().Op("&").Add(eventType.Qual()).Values()
+				})
+			}
+		})
+		group.Return().Nil()
+	})
+	return code
 }
 
 func (eg EventGenerator) generateMirrorConstructorForBus(emitterType, eventBus string, events []string) jen.Code {

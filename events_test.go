@@ -17,6 +17,7 @@ func TestEventGenerator_Generate(t *testing.T) {
 		BusName:    "Events",
 		WithMirror: true,
 		WithBus:    true,
+		FromMirror: true,
 	}
 	code, err := eg.Generate(".")
 	if err != nil {

@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	Package  string `short:"p" long:"package" env:"PACKAGE" description:"Package name (can be override by output dir)" default:"events"`
-	Output   string `short:"o" long:"output" env:"OUTPUT" description:"Generated output destination (- means STDOUT)" default:"-"`
-	Private  bool   `short:"P" long:"private" env:"PRIVATE" description:"Make generated event structures be private by prefix 'event'"`
-	EventBus string `long:"event-bus" env:"EVENT_BUS" description:"Generate structure that aggregates all events" default:""`
-	Mirror   bool   `short:"m" long:"mirror" env:"MIRROR" description:"Mirror all events to the universal emitter"`
-	Args     struct {
+	Package    string `short:"p" long:"package" env:"PACKAGE" description:"Package name (can be override by output dir)" default:"events"`
+	Output     string `short:"o" long:"output" env:"OUTPUT" description:"Generated output destination (- means STDOUT)" default:"-"`
+	Private    bool   `short:"P" long:"private" env:"PRIVATE" description:"Make generated event structures be private by prefix 'event'"`
+	EventBus   string `long:"event-bus" env:"EVENT_BUS" description:"Generate structure that aggregates all events" default:""`
+	Mirror     bool   `short:"m" long:"mirror" env:"MIRROR" description:"Mirror all events to the universal emitter"`
+	FromMirror bool   `long:"from-mirror" env:"FROM_MIRROR" description:"Create producer events as from mirror (only for event bus)"`
+	Args       struct {
 		Directory string `help:"source directory"`
 	} `positional-args:"yes"`
 }
