@@ -14,6 +14,7 @@ type Config struct {
 	Output   string `short:"o" long:"output" env:"OUTPUT" description:"Generated output destination (- means STDOUT)" default:"-"`
 	Private  bool   `short:"P" long:"private" env:"PRIVATE" description:"Make generated event structures be private by prefix 'event'"`
 	EventBus string `long:"event-bus" env:"EVENT_BUS" description:"Generate structure that aggregates all events" default:""`
+	Mirror   bool   `short:"m" long:"mirror" env:"MIRROR" description:"Mirror all events to the universal emitter"`
 	Args     struct {
 		Directory string `help:"source directory"`
 	} `positional-args:"yes"`
@@ -43,9 +44,10 @@ func main() {
 		out = jen.NewFile(config.Package)
 	}
 	ev := structview.EventGenerator{
-		WithBus: config.EventBus != "",
-		BusName: config.EventBus,
-		Private: config.Private,
+		WithMirror: config.Mirror,
+		WithBus:    config.EventBus != "",
+		BusName:    config.EventBus,
+		Private:    config.Private,
 	}
 	code, err := ev.Generate(config.Args.Directory)
 	if err != nil {
