@@ -13,6 +13,7 @@ import (
 type EventGenerator struct {
 	WithBus        bool
 	WithMirror     bool
+	WithSink       bool
 	FromMirror     bool
 	FromIgnoreCase bool
 	BusName        string
@@ -63,7 +64,7 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 						if eg.Private {
 							typeName = "event" + typeName
 						}
-						code.Add(eg.generateForType(info, typeName))
+						code.Add(eg.generateForType(info, typeName, event.HasOption("flat")))
 						code.Add(jen.Line())
 						events = append(events, event.Name)
 						types = append(types, typeName)
@@ -84,6 +85,9 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 		code.Add(eg.generateMirrorConstructorForBus(eg.MirrorType, eg.BusName, events))
 		code.Add(jen.Line())
 	}
+	if eg.WithSink && eg.WithBus {
+		code.Add(eg.generateSinkForBus(eg.BusName, events, payloads))
+	}
 	if eg.FromMirror && eg.WithBus {
 		code.Add(eg.generateBusSource(eg.BusName, events, payloads))
 		code.Add(jen.Line())
@@ -92,7 +96,7 @@ func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
 	return code, nil
 }
 
-func (eg EventGenerator) generateForType(info *Struct, eventName string) jen.Code {
+func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bool) jen.Code {
 	handlerType := jen.Func().Params(info.Qual())
 	impl := eventName
 	mirrorFunc := jen.Func().Params(jen.Id("eventName").String(), jen.Id("payload").Interface())
@@ -108,7 +112,15 @@ func (eg EventGenerator) generateForType(info *Struct, eventName string) jen.Cod
 		group.Id("ev").Dot("handlers").Op("=").Append(jen.Id("ev").Dot("handlers"), jen.Id("handler"))
 		group.Id("ev").Dot("lock").Dot("Unlock").Call()
 	}).Line()
-	code = code.Func().Params(jen.Id("ev").Op("*").Id(impl)).Id("Emit").Params(jen.Id("payload").Add(info.Qual())).BlockFunc(func(group *jen.Group) {
+
+	code = code.Func().Params(jen.Id("ev").Op("*").Id(impl)).Id("Emit").ParamsFunc(func(params *jen.Group) {
+		if len(info.Definition.Fields.List) != 0 {
+			params.Id("payload").Add(info.Qual())
+		}
+	}).BlockFunc(func(group *jen.Group) {
+		if len(info.Definition.Fields.List) == 0 {
+			group.Id("payload").Op(":=").Add(info.Qual()).Values()
+		}
 		group.Id("ev").Dot("lock").Dot("RLock").Call()
 		group.For(jen.List(jen.Id("_"), jen.Id("handler")).Op(":=").Range().Id("ev").Dot("handlers")).BlockFunc(func(iter *jen.Group) {
 			iter.Id("handler").Call(jen.Id("payload"))
@@ -196,5 +208,18 @@ func (eg EventGenerator) generateMirrorConstructorForBus(emitterType, eventBus s
 			group.Id("bus").Dot(eventName).Dot("mirror").Op("=").Id("mirror")
 		}
 		group.Return().Op("&").Id("bus")
+	})
+}
+
+func (eg EventGenerator) generateSinkForBus(eventBus string, events []string, types []*Struct) jen.Code {
+	mirrorFunc := jen.Func().Params(jen.Id("eventName").String(), jen.Id("payload").Interface())
+	return jen.Func().Params(jen.Id("bus").Op("*").Id(eventBus)).Id("Sink").Params(jen.Id("sink").Add(mirrorFunc)).Op("*").Id(eventBus).BlockFunc(func(group *jen.Group) {
+		for i, eventName := range events {
+			inType := types[i]
+			group.Id("bus").Dot(eventName).Dot("Subscribe").Call(jen.Func().Params(jen.Id("payload").Add(inType.Qual())).BlockFunc(func(closure *jen.Group) {
+				closure.Id("sink").Call(jen.Lit(eventName), jen.Id("payload"))
+			}))
+		}
+		group.Return().Id("bus")
 	})
 }

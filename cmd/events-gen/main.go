@@ -17,6 +17,7 @@ type Config struct {
 	Mirror     bool   `short:"m" long:"mirror" env:"MIRROR" description:"Mirror all events to the universal emitter"`
 	FromMirror bool   `short:"f" long:"from-mirror" env:"FROM_MIRROR" description:"Create producer events as from mirror (only for event bus)"`
 	IgnoreCase bool   `short:"i" long:"ignore-case" env:"IGNORE_CASE" description:"Ignore event case for universal source (--from-mirror)"`
+	Sink       bool   `short:"s" long:"sink" env:"SINK" description:"Make a sink method for event bus to subscribe to all events"`
 	Args       struct {
 		Directory string `help:"source directory"`
 	} `positional-args:"yes"`
@@ -48,6 +49,7 @@ func main() {
 	ev := structview.EventGenerator{
 		WithMirror: config.Mirror,
 		WithBus:    config.EventBus != "",
+		WithSink:   config.Sink,
 		BusName:    config.EventBus,
 		Private:    config.Private,
 	}
