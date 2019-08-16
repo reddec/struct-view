@@ -19,6 +19,7 @@ type EventGenerator struct {
 	BusName        string
 	MirrorType     string
 	Private        bool
+	Hints          map[string]string // Event->Struct Name
 }
 
 func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
@@ -54,25 +55,35 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 						log.Println(err)
 						return true
 					}
+					var eventsToGenerate []string
+					for eventName, structName := range eg.Hints {
+						if name == structName {
+							eventsToGenerate = append(eventsToGenerate, eventName)
+						}
+					}
 					for _, line := range strings.Split(comment, "\n") {
 						line = strings.TrimSpace(line)
 						val, err := structtag.Parse(line)
 						if err != nil {
 							continue
 						}
-
 						if event, err := val.Get("event"); err == nil && event != nil {
-							typeName := event.Name
-							if eg.Private {
-								typeName = "event" + typeName
-							}
-							code.Add(eg.generateForType(info, typeName, event.HasOption("flat")))
-							code.Add(jen.Line())
-							events = append(events, event.Name)
-							types = append(types, typeName)
-							payloads = append(payloads, info)
+							eventsToGenerate = append(eventsToGenerate, event.Name)
 						}
+
 					}
+					for _, eventName := range eventsToGenerate {
+						typeName := eventName
+						if eg.Private {
+							typeName = "event" + eventName
+						}
+						code.Add(eg.generateForType(info, typeName, false))
+						code.Add(jen.Line())
+						events = append(events, eventName)
+						types = append(types, typeName)
+						payloads = append(payloads, info)
+					}
+
 					comment = ""
 				}
 				return true
