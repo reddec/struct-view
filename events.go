@@ -21,60 +21,63 @@ type EventGenerator struct {
 	Private        bool
 }
 
-func (eg EventGenerator) Generate(directory string) (jen.Code, error) {
-	fs := token.NewFileSet()
-	p, err := parser.ParseDir(fs, directory, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-	var name string
-	var comment string
-	var prevComment string
-
+func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
+	var (
+		events   []string
+		types    []string
+		payloads []*Struct
+	)
 	code := jen.Empty()
-
-	var events []string
-	var types []string
-	var payloads []*Struct
-
-	for _, def := range p {
-		ast.Inspect(def, func(node ast.Node) bool {
-			switch v := node.(type) {
-			case *ast.CommentGroup:
-				prevComment = v.Text()
-			case *ast.TypeSpec:
-				name = v.Name.Name
-				comment = strings.TrimSpace(prevComment)
-				prevComment = ""
-			case *ast.StructType:
-				info, err := WrapStruct(directory, name, v)
-				if err != nil {
-					log.Println(err)
-					return true
-				}
-				for _, line := range strings.Split(comment, "\n") {
-					line = strings.TrimSpace(line)
-					val, err := structtag.Parse(line)
+	for _, directory := range directories {
+		fs := token.NewFileSet()
+		p, err := parser.ParseDir(fs, directory, nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		var (
+			name        string
+			comment     string
+			prevComment string
+		)
+		for _, def := range p {
+			ast.Inspect(def, func(node ast.Node) bool {
+				switch v := node.(type) {
+				case *ast.CommentGroup:
+					prevComment = v.Text()
+				case *ast.TypeSpec:
+					name = v.Name.Name
+					comment = strings.TrimSpace(prevComment)
+					prevComment = ""
+				case *ast.StructType:
+					info, err := WrapStruct(directory, name, v)
 					if err != nil {
-						continue
+						log.Println(err)
+						return true
 					}
-
-					if event, err := val.Get("event"); err == nil && event != nil {
-						typeName := event.Name
-						if eg.Private {
-							typeName = "event" + typeName
+					for _, line := range strings.Split(comment, "\n") {
+						line = strings.TrimSpace(line)
+						val, err := structtag.Parse(line)
+						if err != nil {
+							continue
 						}
-						code.Add(eg.generateForType(info, typeName, event.HasOption("flat")))
-						code.Add(jen.Line())
-						events = append(events, event.Name)
-						types = append(types, typeName)
-						payloads = append(payloads, info)
+
+						if event, err := val.Get("event"); err == nil && event != nil {
+							typeName := event.Name
+							if eg.Private {
+								typeName = "event" + typeName
+							}
+							code.Add(eg.generateForType(info, typeName, event.HasOption("flat")))
+							code.Add(jen.Line())
+							events = append(events, event.Name)
+							types = append(types, typeName)
+							payloads = append(payloads, info)
+						}
 					}
+					comment = ""
 				}
-				comment = ""
-			}
-			return true
-		})
+				return true
+			})
+		}
 	}
 
 	if eg.WithBus {

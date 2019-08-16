@@ -19,7 +19,7 @@ type Config struct {
 	IgnoreCase bool   `short:"i" long:"ignore-case" env:"IGNORE_CASE" description:"Ignore event case for universal source (--from-mirror)"`
 	Sink       bool   `short:"s" long:"sink" env:"SINK" description:"Make a sink method for event bus to subscribe to all events"`
 	Args       struct {
-		Directory string `help:"source directory"`
+		Directories []string `help:"source directories (by default - current)"`
 	} `positional-args:"yes"`
 }
 
@@ -30,8 +30,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if config.Args.Directory == "" {
-		config.Args.Directory = "."
+	if len(config.Args.Directories) == 0 {
+		config.Args.Directories = []string{"."}
 	}
 
 	var out *jen.File
@@ -53,7 +53,7 @@ func main() {
 		BusName:    config.EventBus,
 		Private:    config.Private,
 	}
-	code, err := ev.Generate(config.Args.Directory)
+	code, err := ev.Generate(config.Args.Directories...)
 	if err != nil {
 		log.Fatal(err)
 	}
