@@ -217,6 +217,42 @@ func LoadStruct(dir, structName string) (*Struct, error) {
 	return nil, errors.New("struct " + structName + " not found")
 }
 
+func LoadAllStructs(dir string) ([]*Struct, error) {
+	fs := token.NewFileSet()
+	p, err := parser.ParseDir(fs, dir, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+	var name string
+	var ans []*Struct
+	for _, def := range p {
+		ast.Inspect(def, func(node ast.Node) bool {
+			switch v := node.(type) {
+			case *ast.TypeSpec:
+				name = v.Name.Name
+			case *ast.StructType:
+				ans = append(ans, &Struct{
+					Struct:     name,
+					Definition: v,
+					Dir:        dir,
+				})
+			}
+			return true
+		})
+	}
+	if ans != nil {
+		pkg, err := FindPackage(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range ans {
+			v.ImportPath = pkg
+		}
+		return ans, nil
+	}
+	return ans, nil
+}
+
 func WrapStruct(dir string, name string, definition *ast.StructType) (*Struct, error) {
 	ans := &Struct{
 		Struct:     name,
