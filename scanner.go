@@ -51,11 +51,15 @@ func FindPackage(dir string) (string, error) {
 }
 
 func findPackage(dir string) (string, error) {
+	const Vendor = "vendor/"
 	if dir == "" {
 		return "", os.ErrNotExist
 	}
 	if isRootPackage(dir) {
 		return "", nil
+	}
+	if strings.HasPrefix(Vendor, dir) {
+		return dir[len(Vendor):], nil
 	}
 	pkg, ok := isVendorPackage(dir)
 	if ok {
