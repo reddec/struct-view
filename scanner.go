@@ -47,7 +47,7 @@ func isRootOf(path, root string) bool {
 }
 func FindPackage(dir string) (string, error) {
 	const Vendor = "vendor/"
-	if strings.HasPrefix(Vendor, dir) {
+	if strings.HasPrefix(dir, Vendor) {
 		return dir[len(Vendor):], nil
 	}
 	dir, _ = filepath.Abs(dir)
