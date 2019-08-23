@@ -140,3 +140,36 @@ Function parameters are self-explainable, but:
 * `eventName` - name of event (`UserCreated`, `UserRemoved`,...)
 * `payload` - original event object (not reference, a value)
 
+
+#### From mirror
+
+All described above were about consuming events made by our generated events bus. However, you may want also
+transparently integrate external system used as source of events and propagate them to the local instance. For example,
+you may want use notification from a message broker (RabbitMQ, IBM MQ, HTTP REST,...) as internal events.
+
+```
++----------------+                +-----------+  <--- emit  --- +-----------+
+| exteral system | --- event ---> | event bus |                 | component |
++----------------+    (as emit)   +-----------+  --- listen --> +-----------+
+```   
+
+In terms of `events-generator` such approach called `FromMirror` and it's available ony together with `EventBus`.
+
+Generated code could be a bit tricky, however, to generate `FromMirror` handlers just add `-f` flag to the generator.
+ It will produce (for example above) methods for events:
+
+**universal emitter**
+
+`func (ev *Events) Emit(eventName string, payload interface{})`
+
+Emits event by name. Payload should event type (reference or value). Silently drops invalid parameters:
+unknown event, incorrect payload.
+
+**universal payload fabric**
+
+`func (ev *Events) Payload(eventName string) interface{}`
+
+Creates payload value (reference) by event name or returns nil.
+
+
+Both of this methods require case-sensitive event name, however, by flag `-i` it can be switched to case-insensitive mode.

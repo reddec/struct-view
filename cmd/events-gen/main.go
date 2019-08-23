@@ -48,12 +48,14 @@ func main() {
 		out = jen.NewFile(config.Package)
 	}
 	ev := structview.EventGenerator{
-		WithMirror: config.Mirror,
-		WithBus:    config.EventBus != "",
-		WithSink:   config.Sink,
-		BusName:    config.EventBus,
-		Private:    config.Private,
-		Hints:      config.Hint,
+		WithMirror:     config.Mirror,
+		WithBus:        config.EventBus != "",
+		WithSink:       config.Sink,
+		BusName:        config.EventBus,
+		Private:        config.Private,
+		Hints:          config.Hint,
+		FromMirror:     config.FromMirror,
+		FromIgnoreCase: config.IgnoreCase,
 	}
 	code, err := ev.Generate(config.Args.Directories...)
 	if err != nil {
