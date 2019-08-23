@@ -110,6 +110,21 @@ type App struct {
 }
 ```
 
+### Multiple packages as a source
+
+Sometimes you need to create events for types that you should not modify (add comments) or for types from different
+packages. 
+
+`events-gen` supports as positional arguments multiple source directories that needs to be scanned. Also it is possible
+to give generator a "hint": expected event name and type. In this case generator will create events object for types that
+matches hints as well as marked by comments.
+
+As an addition to the example above let's imagine other package called `transactions` located in `../transactions` directory
+with types `UserTX` and `BankTX` that we want to use as our events `UserTxCreated` and `BankTxCreated`. So we need to modify
+generator command (used example from basic to reduce number flags, however, you are not restricted in that) as: 
+
+`events-gen -p basic -o events.go -H UserTxCreate:UserTX -H BankTxCreated:BankTX . ../transactions` 
+
 ### Mirroring and integration
 
 Event-based approach for complex systems most of the time means integration with other external, legacy or just other
