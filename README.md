@@ -93,10 +93,10 @@ Generated event bus will looks something like
 
 ```go
 type Events struct {
-	UserCreated    eventUserCreated
-	UserRemoved    eventUserRemoved
-	UserSubscribed eventUserSubscribed
-	UserLeaved     eventUserLeaved
+    UserCreated    eventUserCreated
+    UserRemoved    eventUserRemoved
+    UserSubscribed eventUserSubscribed
+    UserLeaved     eventUserLeaved
 }
 ``` 
 
@@ -109,3 +109,34 @@ type App struct {
     //...
 }
 ```
+
+### Mirroring and integration
+
+Event-based approach for complex systems most of the time means integration with other external, legacy or just other
+components. Common case for enterprise solution is to use integration bus (IBM MQ, RabbitMQ, ....) as a transport for events.
+
+For such cases you may use mirroring (`-m`) as well as global sink (`-m`). Both ways let you consume events in unified 
+way without caring about types.
+
+Those approaches very similar to each other, however, mirroring (`-m`) is a bit faster but supports only one sink and 
+global sink (`-s`) that just subscribes to all events and has no limits for the number of listeners.
+
+So for the example above generator will create:
+
+**mirroring** (`-m`)
+
+```go
+func EventsWithMirror(mirror func(eventName string, payload interface{})) *Events 
+```
+
+**global sink** (`-s`)
+
+```go
+func (bus *Events) Sink(sink func(eventName string, payload interface{})) *Events
+```
+
+Function parameters are self-explainable, but:
+
+* `eventName` - name of event (`UserCreated`, `UserRemoved`,...)
+* `payload` - original event object (not reference, a value)
+
