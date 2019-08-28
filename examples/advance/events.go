@@ -80,3 +80,24 @@ type Events struct {
 	UserSubscribed eventUserSubscribed
 	UserLeaved     eventUserLeaved
 }
+
+func (bus *Events) Emitter() *emitterEvents {
+	return &emitterEvents{events: bus}
+}
+
+type emitterEvents struct {
+	events *Events
+}
+
+func (emitter *emitterEvents) UserCreated(payload User) {
+	emitter.events.UserCreated.Emit(payload)
+}
+func (emitter *emitterEvents) UserRemoved(payload User) {
+	emitter.events.UserRemoved.Emit(payload)
+}
+func (emitter *emitterEvents) UserSubscribed(payload Subscription) {
+	emitter.events.UserSubscribed.Emit(payload)
+}
+func (emitter *emitterEvents) UserLeaved(payload Subscription) {
+	emitter.events.UserLeaved.Emit(payload)
+}

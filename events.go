@@ -19,6 +19,7 @@ type EventGenerator struct {
 	BusName        string
 	MirrorType     string
 	Private        bool
+	Emitter        string
 	Hints          map[string]string // Event->Struct Name
 }
 
@@ -105,6 +106,10 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 	}
 	if eg.FromMirror && eg.WithBus {
 		code.Add(eg.generateBusSource(eg.BusName, events, payloads))
+		code.Add(jen.Line())
+	}
+	if eg.WithBus && eg.Emitter != "" {
+		code.Add(eg.generateEmitter(eg.BusName, events, types, payloads))
 		code.Add(jen.Line())
 	}
 
@@ -237,4 +242,35 @@ func (eg EventGenerator) generateSinkForBus(eventBus string, events []string, ty
 		}
 		group.Return().Id("bus")
 	})
+}
+
+func (eg EventGenerator) generateEmitter(eventBus string, events []string, etypes []string, types []*Struct) jen.Code {
+	empty := jen.Empty()
+	emitter := "emitter" + eventBus
+
+	empty.Func().Params(jen.Id("bus").Op("*").Id(eventBus)).Id(eg.Emitter).Call().Op("*").Id(emitter).BlockFunc(func(group *jen.Group) {
+		group.Return().Op("&").Id(emitter).Values(jen.Id("events").Op(":").Id("bus"))
+	}).Line()
+
+	empty.Type().Id(emitter).StructFunc(func(group *jen.Group) {
+		group.Id("events").Op("*").Id(eventBus)
+	}).Line()
+
+	for i, event := range events {
+		eventType := types[i]
+		var hasArgs = len(eventType.Definition.Fields.List) > 0
+
+		empty.Func().Params(jen.Id("emitter").Op("*").Id(emitter)).Id(event).ParamsFunc(func(params *jen.Group) {
+			if hasArgs {
+				params.Id("payload").Add(eventType.Qual())
+			}
+		}).BlockFunc(func(group *jen.Group) {
+			group.Id("emitter").Dot("events").Dot(event).Dot("Emit").CallFunc(func(call *jen.Group) {
+				if hasArgs {
+					call.Id("payload")
+				}
+			})
+		}).Line()
+	}
+	return empty
 }

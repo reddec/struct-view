@@ -18,6 +18,7 @@ type Config struct {
 	FromMirror bool              `short:"f" long:"from-mirror" env:"FROM_MIRROR" description:"Create producer events as from mirror (only for event bus)"`
 	IgnoreCase bool              `short:"i" long:"ignore-case" env:"IGNORE_CASE" description:"Ignore event case for universal source (--from-mirror)"`
 	Sink       bool              `short:"s" long:"sink" env:"SINK" description:"Make a sink method for event bus to subscribe to all events"`
+	Emitter    string            `short:"e" long:"emitter" env:"EMITTER" description:"Create emitter factory"`
 	Hint       map[string]string `short:"H" long:"hint" env:"HINT" description:"Give a hint about events (eventName -> struct name)"`
 	Args       struct {
 		Directories []string `help:"source directories (by default - current)"`
@@ -56,6 +57,7 @@ func main() {
 		Hints:          config.Hint,
 		FromMirror:     config.FromMirror,
 		FromIgnoreCase: config.IgnoreCase,
+		Emitter:        config.Emitter,
 	}
 	code, err := ev.Generate(config.Args.Directories...)
 	if err != nil {

@@ -18,6 +18,7 @@ Application Options:
   -f, --from-mirror  Create producer events as from mirror (only for event bus) [$FROM_MIRROR]
   -i, --ignore-case  Ignore event case for universal source (--from-mirror) [$IGNORE_CASE]
   -s, --sink         Make a sink method for event bus to subscribe to all events [$SINK]
+  -e, --emitter=     Create emitter factory [$EMITTER]
   -H, --hint=        Give a hint about events (eventName -> struct name) [$HINT]
 
 Help Options:
@@ -188,3 +189,25 @@ Creates payload value (reference) by event name or returns nil.
 
 
 Both of this methods require case-sensitive event name, however, by flag `-i` it can be switched to case-insensitive mode.
+
+### Emitter
+
+It might be useful to use emitter in an external code or already existent code, however, use instance of a `EventBus`
+could be not an ideal decision due to increase of code coupling.
+
+For that reason you may create additional emitter by flag `-e <EmitterFunc>` that will generate additional method `EmitterFunc`
+in a `EventBus` and additional structure that aggregates all `Emit()` methods in one place. By using this approach you
+may require an interface in your code instead of exact implementation.
+
+So for the basic example, described above, `-e Emitter` the implementation of this interface will be generated 
+(note: interface by itself will not be generated due to a best-practice "accept interface, return structure"):
+
+
+```go
+type Sample interface {
+    UserCreated(payload User)
+    UserRemoved(payload User)
+    UserSubscribed(payload Subscription)
+    UserLeaved(payload Subscription)
+}
+```

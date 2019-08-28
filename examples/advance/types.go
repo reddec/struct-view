@@ -1,6 +1,6 @@
 package advance
 
-//go:generate events-gen --event-bus Events -P -p advance -o events.go .
+//go:generate events-gen -e Emitter --event-bus Events -P -p advance -o events.go .
 
 // event:"UserCreated"
 // event:"UserRemoved"
