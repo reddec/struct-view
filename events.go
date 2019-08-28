@@ -101,6 +101,7 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 	}
 	if eg.WithSink && eg.WithBus {
 		code.Add(eg.generateSinkForBus(eg.BusName, events, payloads))
+		code.Add(jen.Line())
 	}
 	if eg.FromMirror && eg.WithBus {
 		code.Add(eg.generateBusSource(eg.BusName, events, payloads))
@@ -165,9 +166,9 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 					eventType := types[i]
 					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Id("obj"))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Op("*").Id("obj"))
 						})
 					})
 				}
@@ -178,9 +179,9 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 					eventType := types[i]
 					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Call(jen.Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Id("obj"))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Call(jen.Op("*").Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Op("*").Id("obj"))
 						})
 					})
 				}
