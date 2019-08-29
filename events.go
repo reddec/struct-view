@@ -20,6 +20,7 @@ type EventGenerator struct {
 	MirrorType     string
 	Private        bool
 	Emitter        string
+	Listener       string
 	Hints          map[string]string // Event->Struct Name
 }
 
@@ -112,7 +113,10 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 		code.Add(eg.generateEmitter(eg.BusName, events, types, payloads))
 		code.Add(jen.Line())
 	}
-
+	if eg.WithBus && eg.Listener != "" {
+		code.Add(eg.generateListener(eg.BusName, events, payloads))
+		code.Add(jen.Line())
+	}
 	return code, nil
 }
 
@@ -273,4 +277,17 @@ func (eg EventGenerator) generateEmitter(eventBus string, events []string, etype
 		}).Line()
 	}
 	return empty
+}
+
+func (eg EventGenerator) generateListener(eventBus string, events []string, types []*Struct) jen.Code {
+	return jen.Func().Params(jen.Id("bus").Op("*").Id(eventBus)).Id(eg.Listener).Call(jen.Id("listener").InterfaceFunc(func(group *jen.Group) {
+		for i, eventName := range events {
+			inType := types[i]
+			group.Id(eventName).Call(jen.Id("payload").Add(inType.Qual()))
+		}
+	})).BlockFunc(func(group *jen.Group) {
+		for _, eventName := range events {
+			group.Id("bus").Dot(eventName).Dot("Subscribe").Call(jen.Id("listener").Dot(eventName))
+		}
+	})
 }

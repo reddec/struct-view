@@ -19,6 +19,7 @@ Application Options:
   -i, --ignore-case  Ignore event case for universal source (--from-mirror) [$IGNORE_CASE]
   -s, --sink         Make a sink method for event bus to subscribe to all events [$SINK]
   -e, --emitter=     Create emitter factory [$EMITTER]
+  -l, --listener=    Create method to subscribe for all events (default: SubscribeAll) [$LISTENER]
   -H, --hint=        Give a hint about events (eventName -> struct name) [$HINT]
 
 Help Options:
@@ -211,3 +212,9 @@ type Sample interface {
     UserLeaved(payload Subscription)
 }
 ```
+
+
+### Listener
+
+To subscribe on all events exists method `SubscribeAll`, however, name of the method could be overloaded by 
+`-l <listener method>` flag. If method name is empty, method will not be generated. 

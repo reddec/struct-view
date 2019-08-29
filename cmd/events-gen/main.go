@@ -19,6 +19,7 @@ type Config struct {
 	IgnoreCase bool              `short:"i" long:"ignore-case" env:"IGNORE_CASE" description:"Ignore event case for universal source (--from-mirror)"`
 	Sink       bool              `short:"s" long:"sink" env:"SINK" description:"Make a sink method for event bus to subscribe to all events"`
 	Emitter    string            `short:"e" long:"emitter" env:"EMITTER" description:"Create emitter factory"`
+	Listener   string            `short:"l" long:"listener" env:"LISTENER" description:"Create method to subscribe for all events" default:"SubscribeAll"`
 	Hint       map[string]string `short:"H" long:"hint" env:"HINT" description:"Give a hint about events (eventName -> struct name)"`
 	Args       struct {
 		Directories []string `help:"source directories (by default - current)"`
@@ -58,6 +59,7 @@ func main() {
 		FromMirror:     config.FromMirror,
 		FromIgnoreCase: config.IgnoreCase,
 		Emitter:        config.Emitter,
+		Listener:       config.Listener,
 	}
 	code, err := ev.Generate(config.Args.Directories...)
 	if err != nil {
