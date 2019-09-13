@@ -14,6 +14,7 @@ type EventGenerator struct {
 	WithBus        bool
 	WithMirror     bool
 	WithSink       bool
+	WithContext    bool
 	FromMirror     bool
 	FromIgnoreCase bool
 	BusName        string
@@ -122,6 +123,9 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 
 func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bool) jen.Code {
 	handlerType := jen.Func().Params(info.Qual())
+	if eg.WithContext {
+		handlerType = jen.Func().Params(jen.Qual("context", "Context"), info.Qual())
+	}
 	impl := eventName
 	mirrorFunc := jen.Func().Params(jen.Id("eventName").String(), jen.Id("payload").Interface())
 	code := jen.Type().Id(impl).StructFunc(func(group *jen.Group) {
@@ -138,6 +142,9 @@ func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bo
 	}).Line()
 
 	code = code.Func().Params(jen.Id("ev").Op("*").Id(impl)).Id("Emit").ParamsFunc(func(params *jen.Group) {
+		if eg.WithContext {
+			params.Id("ctx").Qual("context", "Context")
+		}
 		if len(info.Definition.Fields.List) != 0 {
 			params.Id("payload").Add(info.Qual())
 		}
@@ -147,7 +154,12 @@ func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bo
 		}
 		group.Id("ev").Dot("lock").Dot("RLock").Call()
 		group.For(jen.List(jen.Id("_"), jen.Id("handler")).Op(":=").Range().Id("ev").Dot("handlers")).BlockFunc(func(iter *jen.Group) {
-			iter.Id("handler").Call(jen.Id("payload"))
+			iter.Id("handler").CallFunc(func(calle *jen.Group) {
+				if eg.WithContext {
+					calle.Id("ctx")
+				}
+				calle.Id("payload")
+			})
 		})
 		group.Id("ev").Dot("lock").Dot("RUnlock").Call()
 		if eg.WithMirror {
@@ -168,16 +180,32 @@ func (eg EventGenerator) generateBus(typeName string, events, types []string) je
 }
 
 func (eg EventGenerator) generateBusSource(eventBus string, events []string, types []*Struct) jen.Code {
-	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Emit").Params(jen.Id("eventName").String(), jen.Id("payload").Interface()).BlockFunc(func(group *jen.Group) {
+
+	calle := func(pd jen.Code) jen.Code {
+		return jen.CallFunc(func(group *jen.Group) {
+			if eg.WithContext {
+				group.Id("ctx")
+			}
+			group.Add(pd)
+		})
+	}
+
+	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Emit").ParamsFunc(func(params *jen.Group) {
+		if eg.WithContext {
+			params.Id("ctx").Qual("context", "Context")
+		}
+		params.Id("eventName").String()
+		params.Id("payload").Interface()
+	}).BlockFunc(func(group *jen.Group) {
 		if eg.FromIgnoreCase {
 			group.Switch(jen.Qual("strings", "ToUpper").Call(jen.Id("eventName"))).BlockFunc(func(sw *jen.Group) {
 				for i, eventName := range events {
 					eventType := types[i]
 					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Id("obj")))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Op("*").Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Op("*").Id("obj")))
 						})
 					})
 				}
@@ -188,9 +216,9 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 					eventType := types[i]
 					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Id("obj")))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Call(jen.Op("*").Id("obj"))
+							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Op("*").Id("obj")))
 						})
 					})
 				}
@@ -236,12 +264,29 @@ func (eg EventGenerator) generateMirrorConstructorForBus(emitterType, eventBus s
 }
 
 func (eg EventGenerator) generateSinkForBus(eventBus string, events []string, types []*Struct) jen.Code {
-	mirrorFunc := jen.Func().Params(jen.Id("eventName").String(), jen.Id("payload").Interface())
+	mirrorFunc := jen.Func().ParamsFunc(func(group *jen.Group) {
+		if eg.WithContext {
+			group.Id("ctx").Qual("context", "Context")
+		}
+		group.Id("eventName").String()
+		group.Id("payload").Interface()
+	})
 	return jen.Func().Params(jen.Id("bus").Op("*").Id(eventBus)).Id("Sink").Params(jen.Id("sink").Add(mirrorFunc)).Op("*").Id(eventBus).BlockFunc(func(group *jen.Group) {
 		for i, eventName := range events {
 			inType := types[i]
-			group.Id("bus").Dot(eventName).Dot("Subscribe").Call(jen.Func().Params(jen.Id("payload").Add(inType.Qual())).BlockFunc(func(closure *jen.Group) {
-				closure.Id("sink").Call(jen.Lit(eventName), jen.Id("payload"))
+			group.Id("bus").Dot(eventName).Dot("Subscribe").Call(jen.Func().ParamsFunc(func(params *jen.Group) {
+				if eg.WithContext {
+					params.Id("ctx").Qual("context", "Context")
+				}
+				params.Id("payload").Add(inType.Qual())
+			}).BlockFunc(func(closure *jen.Group) {
+				closure.Id("sink").CallFunc(func(calle *jen.Group) {
+					if eg.WithContext {
+						calle.Id("ctx")
+					}
+					calle.Lit(eventName)
+					calle.Id("payload")
+				})
 			}))
 		}
 		group.Return().Id("bus")
@@ -265,11 +310,17 @@ func (eg EventGenerator) generateEmitter(eventBus string, events []string, etype
 		var hasArgs = len(eventType.Definition.Fields.List) > 0
 
 		empty.Func().Params(jen.Id("emitter").Op("*").Id(emitter)).Id(event).ParamsFunc(func(params *jen.Group) {
+			if eg.WithContext {
+				params.Id("ctx").Qual("context", "Context")
+			}
 			if hasArgs {
 				params.Id("payload").Add(eventType.Qual())
 			}
 		}).BlockFunc(func(group *jen.Group) {
 			group.Id("emitter").Dot("events").Dot(event).Dot("Emit").CallFunc(func(call *jen.Group) {
+				if eg.WithContext {
+					call.Id("ctx")
+				}
 				if hasArgs {
 					call.Id("payload")
 				}
@@ -283,7 +334,12 @@ func (eg EventGenerator) generateListener(eventBus string, events []string, type
 	return jen.Func().Params(jen.Id("bus").Op("*").Id(eventBus)).Id(eg.Listener).Call(jen.Id("listener").InterfaceFunc(func(group *jen.Group) {
 		for i, eventName := range events {
 			inType := types[i]
-			group.Id(eventName).Call(jen.Id("payload").Add(inType.Qual()))
+			group.Id(eventName).CallFunc(func(call *jen.Group) {
+				if eg.WithContext {
+					call.Id("ctx").Qual("context", "Context")
+				}
+				call.Id("payload").Add(inType.Qual())
+			})
 		}
 	})).BlockFunc(func(group *jen.Group) {
 		for _, eventName := range events {

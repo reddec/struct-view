@@ -21,6 +21,7 @@ type Config struct {
 	Emitter    string            `short:"e" long:"emitter" env:"EMITTER" description:"Create emitter factory"`
 	Listener   string            `short:"l" long:"listener" env:"LISTENER" description:"Create method to subscribe for all events" default:"SubscribeAll"`
 	Hint       map[string]string `short:"H" long:"hint" env:"HINT" description:"Give a hint about events (eventName -> struct name)"`
+	Context    bool              `short:"c" long:"context" env:"CONTEXT" description:"Add context to events"`
 	Args       struct {
 		Directories []string `help:"source directories (by default - current)"`
 	} `positional-args:"yes"`
@@ -50,6 +51,7 @@ func main() {
 		out = jen.NewFile(config.Package)
 	}
 	ev := structview.EventGenerator{
+		WithContext:    config.Context,
 		WithMirror:     config.Mirror,
 		WithBus:        config.EventBus != "",
 		WithSink:       config.Sink,

@@ -21,6 +21,7 @@ Application Options:
   -e, --emitter=     Create emitter factory [$EMITTER]
   -l, --listener=    Create method to subscribe for all events (default: SubscribeAll) [$LISTENER]
   -H, --hint=        Give a hint about events (eventName -> struct name) [$HINT]
+  -c, --context      Add context to events [$CONTEXT]
 
 Help Options:
   -h, --help         Show this help message
@@ -217,4 +218,8 @@ type Sample interface {
 ### Listener
 
 To subscribe on all events exists method `SubscribeAll`, however, name of the method could be overloaded by 
-`-l <listener method>` flag. If method name is empty, method will not be generated. 
+`-l <listener method>` flag. If method name is empty, method will not be generated.
+
+### Context
+
+To add `context` argument for all events, add flag `-c` 
