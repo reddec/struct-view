@@ -2,6 +2,10 @@
 
 Installation: `go get -v github.com/reddec/struct-view/cmd/...`
 
+* [Events generator](#events-generator)
+* [Cache generator](#cache-gen)
+* struct-view
+
 ## Events generator
 
 
@@ -223,3 +227,93 @@ To subscribe on all events exists method `SubscribeAll`, however, name of the me
 ### Context
 
 To add `context` argument for all events, add flag `-c` 
+
+## Cache generator
+
+Generates multi-level cache for key-value data with a separate synchronization unit per value.
+
+```
+Usage:
+  cache-gen [OPTIONS]
+
+Application Options:
+  -p, --package=      Package name (can be override by output dir) (default: cache) [$PACKAGE]
+  -o, --output=       Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+  -k, --key-type=     Key type [$KEY_TYPE]
+  -v, --value-type=   Value type [$VALUE_TYPE]
+  -i, --key-import=   Import for key type [$KEY_IMPORT]
+  -I, --value-import= Import for value type [$VALUE_IMPORT]
+  -t, --type-name=    Typename for cache (default: Manager) [$TYPE_NAME]
+
+Help Options:
+  -h, --help          Show this help message
+```
+
+**Common use-case**: you have a service that contains user profiles (identified by ID) and you want to cache results
+to prevent multiple requests for the same user. However, you expect that your code could be used from multiple
+threads/gorountines so parallel requests to different users should not block each-other, but code should make only
+one request per unique user id.
+
+Example:
+
+```
+cache-gen -p users -k int64 -v *UserProfile -I github.com/MyCompany/MyTypes -o user_cached.go
+```
+
+* `-p users` sets package name to `users`
+* `-k int64` sets key type (user id) to int64
+* `-v *UserProfile` sets value type (user profile) as a ref to user-defined type
+* `-I github.com/MyCompany/MyType`  sets import for user-defined package for value type (`UserProfile`)
+* `-o user_cached.go` sets output to file named `user_cached.go`
+
+Type name (`-t`) not set so default name will be used (`Manager`).
+
+Result (functions body omitted):
+
+
+```go
+package cache
+
+import (
+	"context"
+	mytypes "github.com/MyCompany/MyTypes"
+	"sync"
+)
+
+type UpdaterManager interface {
+	Update(ctx context.Context, key int64) (*mytypes.UserProfile, error)
+}
+type UpdaterManagerFunc func(ctx context.Context, key int64) (*mytypes.UserProfile, error)
+
+func (fn UpdaterManagerFunc) Update(ctx context.Context, key int64) (*mytypes.UserProfile, error) {} // body omitted
+
+func NewManagerFunc(updateFunc UpdaterManagerFunc) *Manager {} // body omitted
+
+func NewManager(updater UpdaterManager) *Manager {} // body omitted
+
+type Manager struct {
+    // fields omitted
+}
+
+func (mgr *Manager) Find(key int64) *cacheManager {}
+func (mgr *Manager) FindOrCreate(key int64) *cacheManager {}
+func (mgr *Manager) Get(ctx context.Context, key int64) (*mytypes.UserProfile, err) {}
+func (mgr *Manager) Set(key int64, value *mytypes.UserProfile) {}
+func (mgr *Manager) Purge(key int64) {}
+func (mgr *Manager) PurgeAll() {}
+func (mgr *Manager) Snapshot() map[int64]*mytypes.UserProfile {}
+
+type cacheManager struct {
+    // fields omitted    
+}
+
+func (cache *cacheManager) Valid() bool {}
+func (cache *cacheManager) Invalidate() {}
+func (cache *cacheManager) Key() int64 {}
+func (cache *cacheManager) Get() *mytypes.UserProfile {}
+func (cache *cacheManager) Ensure(ctx context.Context) (*mytypes.UserProfile, error) {}
+func (cache *cacheManager) Set(value *mytypes.UserProfile) {}
+func (cache *cacheManager) Update(ctx context.Context, force bool) error {}
+```
+
+See full example in `examples/cache`
