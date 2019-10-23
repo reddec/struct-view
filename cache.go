@@ -92,7 +92,7 @@ func (cc *CacheGen) generateManager() jen.Code {
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Get").Params(
 		jen.Id("ctx").Qual("context", "Context"),
 		jen.Id("key").Add(cc.Key()),
-	).Params(cc.Value(), jen.Err()).BlockFunc(func(group *jen.Group) {
+	).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
 		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Ensure").Call(jen.Id("ctx"))
 	}).Line()
 

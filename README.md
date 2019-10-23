@@ -297,7 +297,7 @@ type Manager struct {
 
 func (mgr *Manager) Find(key int64) *cacheManager {}
 func (mgr *Manager) FindOrCreate(key int64) *cacheManager {}
-func (mgr *Manager) Get(ctx context.Context, key int64) (*mytypes.UserProfile, err) {}
+func (mgr *Manager) Get(ctx context.Context, key int64) (*mytypes.UserProfile, error) {}
 func (mgr *Manager) Set(key int64, value *mytypes.UserProfile) {}
 func (mgr *Manager) Purge(key int64) {}
 func (mgr *Manager) PurgeAll() {}
