@@ -3,7 +3,7 @@
 Installation: `go get -v github.com/reddec/struct-view/cmd/...`
 
 * [Events generator](#events-generator)
-* [Cache generator](#cache-gen)
+* [Cache generator](#cache-generator)
 * struct-view
 
 ## Events generator
