@@ -64,7 +64,7 @@ func (cc *TimedCache) generateManager() jen.Code {
 		group.Id("now").Op(":=").Qual("time", "Now").Call()
 		group.Id("mgr").Dot("lock").Dot("Lock").Call()
 		group.Defer().Id("mgr").Dot("lock").Dot("Unlock").Call()
-		group.Id("delta").Op(":=").Id("mgr").Dot("lastUpdate").Dot("Sub").Call(jen.Id("now"))
+		group.Id("delta").Op(":=").Id("now").Dot("Sub").Call(jen.Id("mgr").Dot("lastUpdate"))
 		group.If().Id("delta").Op("<=").Id("mgr").Dot("keepAlive").BlockFunc(func(ok *jen.Group) {
 			ok.Return(jen.Id("mgr").Dot("data"), jen.Nil())
 		})
