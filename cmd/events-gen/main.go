@@ -41,7 +41,7 @@ func main() {
 	var out *jen.File
 	if config.Output != "-" {
 		pkg, err := structview.FindPackage(filepath.Dir(config.Output))
-		if err != nil {
+		if err != nil || config.Package != "" {
 			// fallback
 			out = jen.NewFile(config.Package)
 		} else {

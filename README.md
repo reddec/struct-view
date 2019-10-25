@@ -4,6 +4,7 @@ Installation: `go get -v github.com/reddec/struct-view/cmd/...`
 
 * [Events generator](#events-generator)
 * [Cache generator](#cache-generator)
+* [Timed cache](#timed-cache)
 * struct-view
 
 ## Events generator
@@ -317,3 +318,25 @@ func (cache *cacheManager) Update(ctx context.Context, force bool) error {}
 ```
 
 See full example in `examples/cache`
+
+
+## Timed cache
+
+Generate simple cache with expiration time
+
+```
+Usage:
+  timed-cache [OPTIONS]
+
+Application Options:
+  -p, --package=      Package name (can be override by output dir) (default: cache) [$PACKAGE]
+  -o, --output=       Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+  -v, --value-type=   Value type [$VALUE_TYPE]
+  -I, --value-import= Import for value type [$VALUE_IMPORT]
+  -t, --type-name=    Typename for cache (default: Manager) [$TYPE_NAME]
+  -a, --array         Is value should be an array [$ARRAY]
+
+Help Options:
+  -h, --help          Show this help message
+
+```
