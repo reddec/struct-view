@@ -16,7 +16,7 @@ type Config struct {
 	ValueType   string `short:"v" long:"value-type" env:"VALUE_TYPE" description:"Value type" required:"yes"`
 	KeyImport   string `short:"i" long:"key-import" env:"KEY_IMPORT" description:"Import for key type"`
 	ValueImport string `short:"I" long:"value-import" env:"VALUE_IMPORT" description:"Import for value type"`
-	TypeName    string `short:"t" long:"type-name" env:"TYPE_NAME" description:"Typename for cache" default:"Manager"`
+	TypeName    string `short:"t" long:"type-name" env:"TYPE_NAME" description:"TypeName for cache" default:"Manager"`
 }
 
 func main() {

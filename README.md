@@ -5,6 +5,7 @@ Installation: `go get -v github.com/reddec/struct-view/cmd/...`
 * [Events generator](#events-generator)
 * [Cache generator](#cache-generator)
 * [Timed cache](#timed-cache)
+* [Binary encoding](#binary-gen)
 * struct-view
 
 ## Events generator
@@ -340,3 +341,28 @@ Help Options:
   -h, --help          Show this help message
 
 ```
+
+## Binary gen
+
+Generate very simple static binary marshal/unmarshal for struct. Unknown fields are ignored. Goal is support same
+encoding/decoding with C/C++ structures with same encoding layout (aka: result should be decodable on Big endian machines
+like `(struct *my_type)(buffer)`).
+
+Currently supported types:
+
+* `uint8`, `uint16`, `uint32`, `uint64`
+
+```
+Usage:
+  binary-gen [OPTIONS]
+
+Application Options:
+  -o, --output=    Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+  -t, --type-name= TypeName for generator (default: Manager) [$TYPE_NAME]
+
+Help Options:
+  -h, --help       Show this help message
+
+```
+
+see [examples/binarygen](examples/binarygen) directory
