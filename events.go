@@ -22,6 +22,7 @@ type EventGenerator struct {
 	Private        bool
 	Emitter        string
 	Listener       string
+	PrivateEmit    bool
 	Hints          map[string]string // Event->Struct Name
 }
 
@@ -129,6 +130,13 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 	return code, nil
 }
 
+func (eg EventGenerator) emitFunc() string {
+	if eg.PrivateEmit {
+		return "emit"
+	}
+	return "Emit"
+}
+
 func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bool) jen.Code {
 	handlerType := jen.Func().Params(info.Qual())
 	if eg.WithContext {
@@ -149,7 +157,7 @@ func (eg EventGenerator) generateForType(info *Struct, eventName string, flat bo
 		group.Id("ev").Dot("lock").Dot("Unlock").Call()
 	}).Line()
 
-	code = code.Func().Params(jen.Id("ev").Op("*").Id(impl)).Id("Emit").ParamsFunc(func(params *jen.Group) {
+	code = code.Func().Params(jen.Id("ev").Op("*").Id(impl)).Id(eg.emitFunc()).ParamsFunc(func(params *jen.Group) {
 		if eg.WithContext {
 			params.Id("ctx").Qual("context", "Context")
 		}
@@ -198,7 +206,7 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 		})
 	}
 
-	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id("Emit").ParamsFunc(func(params *jen.Group) {
+	code := jen.Func().Params(jen.Id("ev").Op("*").Id(eventBus)).Id(eg.emitFunc()).ParamsFunc(func(params *jen.Group) {
 		if eg.WithContext {
 			params.Id("ctx").Qual("context", "Context")
 		}
@@ -211,9 +219,9 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 					eventType := types[i]
 					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Id("obj")))
+							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Op("*").Id("obj")))
+							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
 						})
 					})
 				}
@@ -224,9 +232,9 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 					eventType := types[i]
 					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
 						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Id("obj")))
+							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
 						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot("Emit").Add(calle(jen.Op("*").Id("obj")))
+							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
 						})
 					})
 				}
@@ -325,7 +333,7 @@ func (eg EventGenerator) generateEmitter(eventBus string, events []string, etype
 				params.Id("payload").Add(eventType.Qual())
 			}
 		}).BlockFunc(func(group *jen.Group) {
-			group.Id("emitter").Dot("events").Dot(event).Dot("Emit").CallFunc(func(call *jen.Group) {
+			group.Id("emitter").Dot("events").Dot(event).Dot(eg.emitFunc()).CallFunc(func(call *jen.Group) {
 				if eg.WithContext {
 					call.Id("ctx")
 				}

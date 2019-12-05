@@ -19,6 +19,7 @@ func TestEventGenerator_Generate(t *testing.T) {
 		WithBus:        true,
 		FromMirror:     true,
 		FromIgnoreCase: true,
+		PrivateEmit:    true,
 	}
 	code, err := eg.Generate(".")
 	if err != nil {
