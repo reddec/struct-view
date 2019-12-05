@@ -6,4 +6,5 @@ require (
 	github.com/dave/jennifer v1.3.0
 	github.com/fatih/structtag v1.0.0
 	github.com/jessevdk/go-flags v1.4.0
+	golang.org/x/net v0.0.0-20191204025024-5ee1b9f4859a
 )
