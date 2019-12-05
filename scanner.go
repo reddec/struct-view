@@ -81,13 +81,24 @@ type Struct struct {
 	Dir        string
 	Definition *ast.StructType
 	ImportPath string
+	Ref        bool
+}
+
+func (s Struct) AsRef() Struct {
+	cp := s
+	cp.Ref = true
+	return cp
 }
 
 func (s Struct) Qual() jen.Code {
-	if s.ImportPath == "" {
-		return jen.Id(s.Struct)
+	var tp = jen.Empty()
+	if s.Ref {
+		tp = jen.Op("*")
 	}
-	return jen.Qual(s.ImportPath, s.Struct)
+	if s.ImportPath == "" {
+		return tp.Id(s.Struct)
+	}
+	return tp.Qual(s.ImportPath, s.Struct)
 }
 
 func (s *Struct) FindClosetField(name string, containsSearch bool) *ast.Field {

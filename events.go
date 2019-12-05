@@ -59,9 +59,11 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 						return true
 					}
 					var eventsToGenerate []string
+					var isRef []bool
 					for eventName, structName := range eg.Hints {
 						if name == structName {
 							eventsToGenerate = append(eventsToGenerate, eventName)
+							isRef = append(isRef, false)
 						}
 					}
 					for _, line := range strings.Split(comment, "\n") {
@@ -72,19 +74,25 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 						}
 						if event, err := val.Get("event"); err == nil && event != nil {
 							eventsToGenerate = append(eventsToGenerate, event.Name)
+							isRef = append(isRef, event.HasOption("ref"))
 						}
 
 					}
-					for _, eventName := range eventsToGenerate {
+					for i, eventName := range eventsToGenerate {
 						typeName := eventName
 						if eg.Private {
 							typeName = "event" + eventName
 						}
-						code.Add(eg.generateForType(info, typeName, false))
+						ref := isRef[i]
+						cp := *info
+						if ref {
+							cp = cp.AsRef()
+						}
+						code.Add(eg.generateForType(&cp, typeName, false))
 						code.Add(jen.Line())
 						events = append(events, eventName)
 						types = append(types, typeName)
-						payloads = append(payloads, info)
+						payloads = append(payloads, &cp)
 					}
 
 					comment = ""

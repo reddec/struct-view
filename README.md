@@ -60,6 +60,8 @@ type Subscription struct {
 Magic comment `event:""` gives an instruction to the event generator hint that this type is used as parameter for event
 with name defined in commas (`UserCreated`, `UserRemoved` for type `User`).
 
+You may use option `ref` (like `event:"EventName,ref"`) to use payload by reference.
+
 Instruction for go generator `events-gen -p basic -o events.go .` tells us to generate events to file `events.go` with
 package `basic` and look for source files in current (`.`) directory. 
 
