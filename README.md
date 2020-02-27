@@ -452,3 +452,53 @@ func (v *Speed) UnmarshalJSON(data []byte) error {
 }
 
 ```
+
+## Sync map gen
+
+Generates Java-like thread-safe map
+
+Generated code will implement next interface:
+
+```go
+package sample
+
+type UpdaterFunc func(key KeyType) (ValueType, error)
+
+type SyncItem interface {
+    Valid() bool
+    Invalidate() 
+    Key() KeyType
+    Get() ValueType
+    Set(value ValueType)
+    Ensure(updater UpdaterFunc) (ValueType, error)
+}
+
+type SyncMap interface{
+    Find(key KeyType) SyncItem
+    FindOrCreate(key KeyType) SyncItem
+    Get(key KeyType, construct UpdaterFunc) (ValueType, error)
+    Set(key KeyType, value ValueType)
+    Purge(key KeyType)
+    PurgeAll()
+    Snapshot() map[KeyType]ValueType
+} 
+```
+
+Usage
+
+```
+Usage:
+  syncmap-gen [OPTIONS]
+
+Application Options:
+  -p, --package=      Package name (can be override by output dir) (default: cache) [$PACKAGE]
+  -o, --output=       Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+  -k, --key-type=     Key type [$KEY_TYPE]
+  -v, --value-type=   Value type [$VALUE_TYPE]
+  -i, --key-import=   Import for key type [$KEY_IMPORT]
+  -I, --value-import= Import for value type [$VALUE_IMPORT]
+  -t, --type-name=    TypeName for cache (default: Manager) [$TYPE_NAME]
+
+Help Options:
+  -h, --help          Show this help message
+```
