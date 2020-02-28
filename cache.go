@@ -101,6 +101,13 @@ func (cc *CacheGen) generateManager() jen.Code {
 		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Ensure").Call(jen.Id("ctx"))
 	}).Line()
 
+	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Update").Params(
+		jen.Id("ctx").Qual("context", "Context"),
+		jen.Id("key").Add(cc.Key()),
+	).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
+		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Force").Call(jen.Id("ctx"))
+	}).Line()
+
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Set").Params(
 		jen.Id("key").Add(cc.Key()),
 		jen.Id("value").Add(cc.Value()),
@@ -163,6 +170,11 @@ func (cc *CacheGen) generateCacheNode() jen.Code {
 
 	code = code.Line().Func().Params(jen.Id("cache").Op("*").Id(cc.CacheType())).Id("Ensure").Params(jen.Id("ctx").Qual("context", "Context")).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
 		group.Err().Op(":=").Id("cache").Dot("Update").Call(jen.Id("ctx"), jen.False())
+		group.Return(jen.Id("cache").Dot("data"), jen.Err())
+	}).Line()
+
+	code = code.Line().Func().Params(jen.Id("cache").Op("*").Id(cc.CacheType())).Id("Force").Params(jen.Id("ctx").Qual("context", "Context")).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
+		group.Err().Op(":=").Id("cache").Dot("Update").Call(jen.Id("ctx"), jen.True())
 		group.Return(jen.Id("cache").Dot("data"), jen.Err())
 	}).Line()
 
