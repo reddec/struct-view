@@ -59,7 +59,7 @@ func (cc *TimedCache) generateManager() jen.Code {
 		group.Id("updater").Add(jen.Id(cc.UpdaterType()))
 	}).Line()
 
-	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Get").Params().Add(cc.Value()).BlockFunc(func(group *jen.Group) {
+	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Data").Params().Add(cc.Value()).BlockFunc(func(group *jen.Group) {
 		group.Id("mgr").Dot("lock").Dot("RLock").Call()
 		group.Defer().Id("mgr").Dot("lock").Dot("RUnlock").Call()
 		group.Return().Id("mgr").Dot("data")
