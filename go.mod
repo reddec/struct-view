@@ -1,6 +1,6 @@
 module github.com/reddec/struct-view
 
-go 1.12
+go 1.13
 
 require (
 	github.com/dave/jennifer v1.3.0
