@@ -8,9 +8,16 @@ type TimedCache struct {
 	ValueImport string
 	Array       bool
 	PrivateInit bool
+	WithEvents  bool
 }
 
 func (cc *TimedCache) UpdaterType() string { return "Updater" + cc.TypeName }
+
+func (cc *TimedCache) EventType() string { return "Event" + cc.TypeName + "Func" }
+
+func (cc *TimedCache) EventKindType() string { return "Event" + cc.TypeName }
+
+func (cc *TimedCache) EventTypeName(event string) string { return "Event" + cc.TypeName + event }
 
 func (cc *TimedCache) Value() jen.Code {
 	tp := jen.Empty()
@@ -57,6 +64,9 @@ func (cc *TimedCache) generateManager() jen.Code {
 		group.Id("keepAlive").Qual("time", "Duration")
 		group.Id("data").Add(cc.Value())
 		group.Id("updater").Add(jen.Id(cc.UpdaterType()))
+		if cc.WithEvents {
+			group.Id("listeners").Index().Id(cc.EventType())
+		}
 	}).Line()
 
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Data").Params().Add(cc.Value()).BlockFunc(func(group *jen.Group) {
@@ -68,15 +78,21 @@ func (cc *TimedCache) generateManager() jen.Code {
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Get").Params(jen.Id("ctx").Qual("context", "Context")).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
 		group.Id("now").Op(":=").Qual("time", "Now").Call()
 		group.Id("mgr").Dot("lock").Dot("Lock").Call()
-		group.Defer().Id("mgr").Dot("lock").Dot("Unlock").Call()
 		group.Id("delta").Op(":=").Id("now").Dot("Sub").Call(jen.Id("mgr").Dot("lastUpdate"))
 		group.If().Id("delta").Op("<=").Id("mgr").Dot("keepAlive").BlockFunc(func(ok *jen.Group) {
+			ok.Id("mgr").Dot("lock").Dot("Unlock").Call()
 			ok.Return(jen.Id("mgr").Dot("data"), jen.Nil())
 		})
 		group.List(jen.Id("data"), jen.Err()).Op(":=").Id("mgr").Dot("updater").Dot("Update").Call(jen.Id("ctx"))
 		group.If().Err().Op("==").Nil().BlockFunc(func(ok *jen.Group) {
 			ok.Id("mgr").Dot("data").Op("=").Id("data")
 			ok.Id("mgr").Dot("lastUpdate").Op("=").Id("now")
+			ok.Id("mgr").Dot("lock").Dot("Unlock").Call()
+			if cc.WithEvents {
+				group.Id("mgr").Dot("notify").Call(jen.Id("data"), jen.Id(cc.EventTypeName("Update")))
+			}
+		}).Else().BlockFunc(func(fail *jen.Group) {
+			fail.Id("mgr").Dot("lock").Dot("Unlock").Call()
 		})
 		group.Return(jen.Id("mgr").Dot("data"), jen.Err())
 	}).Line()
@@ -89,10 +105,33 @@ func (cc *TimedCache) generateManager() jen.Code {
 
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Set").Params(jen.Id("data").Add(cc.Value())).BlockFunc(func(group *jen.Group) {
 		group.Id("mgr").Dot("lock").Dot("Lock").Call()
-		group.Defer().Id("mgr").Dot("lock").Dot("Unlock").Call()
 		group.Id("mgr").Dot("lastUpdate").Op("=").Qual("time", "Now").Call()
 		group.Id("mgr").Dot("data").Op("=").Id("data")
+		group.Id("mgr").Dot("lock").Dot("Unlock").Call()
+		if cc.WithEvents {
+			group.Id("mgr").Dot("notify").Call(jen.Id("data"), jen.Id(cc.EventTypeName("Update")))
+		}
 	}).Line()
+
+	if cc.WithEvents {
+		code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Subscribe").Params(
+			jen.Id("handlerFunc").Id(cc.EventType()),
+		).BlockFunc(func(group *jen.Group) {
+			group.Id("mgr").Dot("listeners").Op("=").Append(jen.Id("mgr").Dot("listeners"), jen.Id("handlerFunc"))
+		}).Line()
+		code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("notify").Params(
+			jen.Id("value").Add(cc.Value()),
+			jen.Id("event").Id(cc.EventKindType()),
+		).BlockFunc(func(group *jen.Group) {
+			group.Id("n").Op(":=").Len(jen.Id("mgr").Dot("listeners"))
+			group.For(jen.Id("i").Op(":=").Lit(0), jen.Id("i").Op("<").Id("n"), jen.Id("i").Op("++")).BlockFunc(func(iter *jen.Group) {
+				iter.Id("mgr").Dot("listeners").Index(jen.Id("i")).Call(
+					jen.Id("value"),
+					jen.Id("event"),
+				)
+			})
+		})
+	}
 	return code
 }
 
@@ -105,5 +144,13 @@ func (cc *TimedCache) generateUpdater() jen.Code {
 	code = code.Line().Func().Params(jen.Id("fn").Id(cc.UpdaterType() + "Func")).Id("Update").Add(def).BlockFunc(func(group *jen.Group) {
 		group.Return().Id("fn").Call(jen.Id("ctx"))
 	})
+	if cc.WithEvents {
+		code = code.Line().Type().Id(cc.EventType()).Func().Params(jen.Id("value").Add(cc.Value()), jen.Id("kind").Id(cc.EventKindType()))
+		code = code.Line().Type().Id(cc.EventKindType()).Int()
+		code = code.Line().Const().DefsFunc(func(group *jen.Group) {
+			group.Id(cc.EventTypeName("Update")).Id(cc.EventKindType()).Op("=").Lit(0b01).Comment("0b01")
+			group.Id(cc.EventTypeName("DeleteAll")).Id(cc.EventKindType()).Op("=").Lit(0b110).Comment("0b110")
+		})
+	}
 	return code
 }
