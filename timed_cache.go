@@ -65,7 +65,7 @@ func (cc *TimedCache) generateManager() jen.Code {
 		group.Return().Id("mgr").Dot("data")
 	}).Line()
 
-	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Ensure").Params(jen.Id("ctx").Qual("context", "Context")).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
+	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Get").Params(jen.Id("ctx").Qual("context", "Context")).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
 		group.Id("now").Op(":=").Qual("time", "Now").Call()
 		group.Id("mgr").Dot("lock").Dot("Lock").Call()
 		group.Defer().Id("mgr").Dot("lock").Dot("Unlock").Call()
