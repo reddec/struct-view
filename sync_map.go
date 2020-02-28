@@ -78,7 +78,7 @@ func (cc *SyncMapGen) generateManager() jen.Code {
 		jen.Id("key").Add(cc.Key()),
 		jen.Id("construct").Id(cc.UpdaterType()),
 	).Params(cc.Value(), jen.Error()).BlockFunc(func(group *jen.Group) {
-		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Ensure").Call(jen.Id("updater"))
+		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Ensure").Call(jen.Id("construct"))
 	}).Line()
 
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Set").Params(
