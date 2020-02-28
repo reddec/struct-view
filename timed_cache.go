@@ -7,7 +7,7 @@ type TimedCache struct {
 	ValueType   string
 	ValueImport string
 	Array       bool
-	Private     bool
+	PrivateInit bool
 }
 
 func (cc *TimedCache) UpdaterType() string { return "Updater" + cc.TypeName }
@@ -39,7 +39,7 @@ func (cc *TimedCache) generateManager() jen.Code {
 		prefix = "new"
 	}
 	code := jen.Func().Id(prefix+cc.TypeName+"Func").Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updateFunc").Id(cc.UpdaterType()+"Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
-		group.Return().Id("New"+cc.TypeName).Call(jen.Id("keepAlive"), jen.Id("updateFunc"))
+		group.Return().Id(prefix+cc.TypeName).Call(jen.Id("keepAlive"), jen.Id("updateFunc"))
 	}).Line()
 
 	code = code.Line().Func().Id(prefix+cc.TypeName).Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {

@@ -43,7 +43,7 @@ func main() {
 		ValueType:   config.ValueType,
 		ValueImport: config.ValueImport,
 		Array:       config.Array,
-		Private:     config.PrivateInit,
+		PrivateInit: config.PrivateInit,
 	}
 	code := ev.Generate()
 	out.Add(code)

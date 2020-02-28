@@ -48,7 +48,7 @@ func (cc *CacheGen) generateManager() jen.Code {
 		prefix = "new"
 	}
 	code := jen.Func().Id(prefix + cc.TypeName + "Func").Params(jen.Id("updateFunc").Id(cc.UpdaterType() + "Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
-		group.Return().Id("New" + cc.TypeName).Call(jen.Id("updateFunc"))
+		group.Return().Id(prefix + cc.TypeName).Call(jen.Id("updateFunc"))
 	}).Line()
 
 	code = code.Line().Func().Id(prefix + cc.TypeName).Params(jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
