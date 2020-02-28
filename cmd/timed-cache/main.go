@@ -16,6 +16,7 @@ type Config struct {
 	ValueImport string `short:"I" long:"value-import" env:"VALUE_IMPORT" description:"Import for value type"`
 	TypeName    string `short:"t" long:"type-name" env:"TYPE_NAME" description:"TypeName for cache" default:"Manager"`
 	Array       bool   `short:"a" long:"array" env:"ARRAY" description:"Is value should be an array"`
+	PrivateInit bool   `long:"private-init" env:"PRIVATE_INIT" description:"Private initialization"`
 }
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 		ValueType:   config.ValueType,
 		ValueImport: config.ValueImport,
 		Array:       config.Array,
+		Private:     config.PrivateInit,
 	}
 	code := ev.Generate()
 	out.Add(code)

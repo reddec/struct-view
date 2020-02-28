@@ -7,6 +7,7 @@ type TimedCache struct {
 	ValueType   string
 	ValueImport string
 	Array       bool
+	Private     bool
 }
 
 func (cc *TimedCache) UpdaterType() string { return "Updater" + cc.TypeName }
@@ -33,11 +34,15 @@ func (cc *TimedCache) Generate() jen.Code {
 }
 
 func (cc *TimedCache) generateManager() jen.Code {
-	code := jen.Func().Id("New"+cc.TypeName+"Func").Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updateFunc").Id(cc.UpdaterType()+"Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+	prefix := "New"
+	if cc.PrivateInit {
+		prefix = "new"
+	}
+	code := jen.Func().Id(prefix+cc.TypeName+"Func").Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updateFunc").Id(cc.UpdaterType()+"Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
 		group.Return().Id("New"+cc.TypeName).Call(jen.Id("keepAlive"), jen.Id("updateFunc"))
 	}).Line()
 
-	code = code.Line().Func().Id("New"+cc.TypeName).Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+	code = code.Line().Func().Id(prefix+cc.TypeName).Params(jen.Id("keepAlive").Qual("time", "Duration"), jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
 		group.ReturnFunc(func(ret *jen.Group) {
 			ret.Op("&").Id(cc.TypeName).Values(
 				jen.Id("keepAlive").Op(":").Id("keepAlive"),

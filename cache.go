@@ -8,6 +8,7 @@ type CacheGen struct {
 	KeyImport   string
 	ValueType   string
 	ValueImport string
+	PrivateInit bool
 }
 
 func (cc *CacheGen) UpdaterType() string { return "Updater" + cc.TypeName }
@@ -42,11 +43,15 @@ func (cc *CacheGen) Generate() jen.Code {
 }
 
 func (cc *CacheGen) generateManager() jen.Code {
-	code := jen.Func().Id("New" + cc.TypeName + "Func").Params(jen.Id("updateFunc").Id(cc.UpdaterType() + "Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+	prefix := "New"
+	if cc.PrivateInit {
+		prefix = "new"
+	}
+	code := jen.Func().Id(prefix + cc.TypeName + "Func").Params(jen.Id("updateFunc").Id(cc.UpdaterType() + "Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
 		group.Return().Id("New" + cc.TypeName).Call(jen.Id("updateFunc"))
 	}).Line()
 
-	code = code.Line().Func().Id("New" + cc.TypeName).Params(jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+	code = code.Line().Func().Id(prefix + cc.TypeName).Params(jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
 		group.ReturnFunc(func(ret *jen.Group) {
 			ret.Op("&").Id(cc.TypeName).Values(
 				jen.Id("cache").Op(":").Make(jen.Map(cc.Key()).Add(jen.Op("*").Id(cc.CacheType()))),
