@@ -121,6 +121,27 @@ func (cc *CacheGen) generateManager() jen.Code {
 		group.Return().Id("mgr").Dot("FindOrCreate").Call(jen.Id("key")).Dot("Force").Call(jen.Id("ctx"))
 	}).Line()
 
+	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("UpdateAll").Params(
+		jen.Id("ctx").Qual("context", "Context"),
+	).Error().BlockFunc(func(group *jen.Group) {
+		group.Id("mgr").Dot("lock").Dot("RLock").Call()
+		group.Id("ids").Op(":=").Make(jen.Index().Add(cc.Key()), jen.Lit(0), jen.Len(jen.Id("mgr").Dot("cache")))
+		group.For().Id("key").Op(":=").Range().Id("mgr").Dot("cache").BlockFunc(func(loop *jen.Group) {
+			loop.Id("ids").Op("=").Append(jen.Id("ids"), jen.Id("key"))
+		})
+		group.Id("mgr").Dot("lock").Dot("RUnlock").Call()
+		group.For().List(jen.Id("_"), jen.Id("id")).Op(":=").Range().Id("ids").BlockFunc(func(iter *jen.Group) {
+			iter.List(jen.Id("_"), jen.Err()).Op(":=").Id("mgr").Dot("Update").Params(jen.Id("ctx"), jen.Id("id"))
+			iter.If().Err().Op("!=").Nil().BlockFunc(func(fail *jen.Group) {
+				fail.Return().Err()
+			})
+			iter.If(jen.Err().Op(":=").Id("ctx").Dot("Err").Call(), jen.Err().Op("!=").Nil()).BlockFunc(func(fail *jen.Group) {
+				fail.Return().Err()
+			})
+		})
+		group.Return().Nil()
+	}).Line()
+
 	code = code.Line().Func().Params(jen.Id("mgr").Op("*").Id(cc.TypeName)).Id("Set").Params(
 		jen.Id("key").Add(cc.Key()),
 		jen.Id("value").Add(cc.Value()),
