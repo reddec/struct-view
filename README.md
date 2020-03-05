@@ -502,3 +502,55 @@ Application Options:
 Help Options:
   -h, --help          Show this help message
 ```
+
+### Params gen
+
+
+Scans struct methods and generate wrappers for all parameters for all exported methods
+
+Example:
+
+```go
+
+type App struct {}
+
+func (app *App) Sum(a, b, c int) int {return a + b +c}
+```
+
+invoke
+
+`params-gen -t App -o params.go`
+
+will generate
+
+
+```go
+type SumParams struct {
+	A int `form:"a" json:"a" xml:"a" yaml:"a"`
+	B int `form:"b" json:"b" xml:"b" yaml:"b"`
+	C int `form:"c" json:"c" xml:"c" yaml:"c"`
+}
+
+func (sp *SumParams) Invoke(app *App) int {
+	return app.Sum(sp.A, sp.B, sp.C)
+}
+```
+
+
+
+Usage
+
+```
+Usage:
+  params-gen [OPTIONS]
+
+Application Options:
+  -p, --package=   Package name (can be override by output dir) [$PACKAGE]
+  -o, --output=    Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+      --dir=       Directory to scan (default: .) [$DIR]
+  -t, --type-name= TypeName for cache (default: Manager) [$TYPE_NAME]
+
+Help Options:
+  -h, --help       Show this help message
+
+```
