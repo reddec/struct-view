@@ -16,6 +16,7 @@ type Config struct {
 	Output   string `short:"o" long:"output" env:"OUTPUT" description:"Generated output destination (- means STDOUT)" default:"-"`
 	Dir      string `long:"dir" env:"DIR" description:"Directory to scan" default:"."`
 	TypeName string `short:"t" long:"type-name" env:"TYPE_NAME" description:"TypeName for cache" default:"Manager"`
+	Gin      bool   `long:"gin" env:"GIN" description:"Enable binding for gin"`
 }
 
 func main() {
@@ -40,6 +41,7 @@ func main() {
 	ev := structview.ParamsGen{
 		StructName: config.TypeName,
 		Dir:        config.Dir,
+		Gin:        config.Gin,
 	}
 	code, err := ev.Generate()
 	if err != nil {

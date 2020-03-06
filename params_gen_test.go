@@ -10,6 +10,7 @@ func TestParamsGen_Generate(t *testing.T) {
 	tt := ParamsGen{
 		Dir:        "examples/params",
 		StructName: "Basic",
+		Gin:        true,
 	}
 	code, err := tt.Generate()
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 type ParamsGen struct {
 	Dir        string
 	StructName string
+	Gin        bool
 }
 
 func (pg *ParamsGen) Generate() (jen.Code, error) {
@@ -81,12 +82,14 @@ func (pg *ParamsGen) handleFunction(file *ast.File, fd *ast.FuncDecl, localPacka
 				xmlName := jsonName
 				yamlName := jsonName
 				formName := jsonName
+				pathName := jsonName
 				varType := getVarType(file, field.Type, localPackage)
 				group.Id(varName).Add(varType).Tag(map[string]string{
 					"json": jsonName,
 					"yaml": yamlName,
 					"form": formName,
 					"xml":  xmlName,
+					"path": pathName,
 				})
 				invokeVars = append(invokeVars, jen.Id(vName).Dot(varName))
 			}
@@ -114,7 +117,19 @@ func (pg *ParamsGen) handleFunction(file *ast.File, fd *ast.FuncDecl, localPacka
 		} else {
 			group.Id("app").Dot(fd.Name.Name).Call(invokeVars...)
 		}
-	})
+	}).Line()
+
+	if pg.Gin {
+		code.Line().Func().Params(jen.Id(vName).Op("*").Id(tName)).Id("Bind").Params(jen.Id("gctx").Op("*").Qual("github.com/gin-gonic/gin", "Context")).Error().BlockFunc(func(group *jen.Group) {
+			group.If(jen.Err().Op(":=").Id("gctx").Dot("Bind").Call(jen.Id(vName)), jen.Err().Op("!=").Nil()).BlockFunc(func(fail *jen.Group) {
+				fail.Return().Err()
+			})
+			group.If(jen.Err().Op(":=").Id("gctx").Dot("BindUri").Call(jen.Id(vName)), jen.Err().Op("!=").Nil()).BlockFunc(func(fail *jen.Group) {
+				fail.Return().Err()
+			})
+			group.Return().Nil()
+		}).Line()
+	}
 
 	return code
 }
