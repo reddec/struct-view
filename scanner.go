@@ -84,6 +84,10 @@ type Struct struct {
 	Ref        bool
 }
 
+func (s Struct) Empty() bool {
+	return s.Definition.Fields == nil || len(s.Definition.Fields.List) == 0
+}
+
 func (s Struct) AsRef() Struct {
 	cp := s
 	cp.Ref = true

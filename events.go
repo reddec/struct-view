@@ -217,12 +217,17 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 			group.Switch(jen.Qual("strings", "ToUpper").Call(jen.Id("eventName"))).BlockFunc(func(sw *jen.Group) {
 				for i, eventName := range events {
 					eventType := types[i]
+
 					sw.Case(jen.Lit(strings.ToUpper(eventName))).BlockFunc(func(evGroup *jen.Group) {
-						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
-						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
-						})
+						if eventType.Empty() {
+							evGroup.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Empty()))
+						} else {
+							evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+								casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
+							}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+								casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
+							})
+						}
 					})
 				}
 			})
@@ -231,11 +236,15 @@ func (eg EventGenerator) generateBusSource(eventBus string, events []string, typ
 				for i, eventName := range events {
 					eventType := types[i]
 					sw.Case(jen.Lit(eventName)).BlockFunc(func(evGroup *jen.Group) {
-						evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
-						}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
-							casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
-						})
+						if eventType.Empty() {
+							evGroup.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Empty()))
+						} else {
+							evGroup.If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(eventType.Qual()), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+								casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Id("obj")))
+							}).Else().If(jen.List(jen.Id("obj"), jen.Id("ok")).Op(":=").Id("payload").Op(".").Parens(jen.Op("*").Add(eventType.Qual())), jen.Id("ok")).BlockFunc(func(casted *jen.Group) {
+								casted.Id("ev").Dot(eventName).Dot(eg.emitFunc()).Add(calle(jen.Op("*").Id("obj")))
+							})
+						}
 					})
 				}
 			})

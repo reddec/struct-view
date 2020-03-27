@@ -83,7 +83,7 @@ func (pg *ParamsGen) handleFunction(file *ast.File, fd *ast.FuncDecl, localPacka
 				yamlName := jsonName
 				formName := jsonName
 				pathName := jsonName
-				varType := getVarType(file, field.Type, localPackage)
+				varType := TypeDefinition(file, field.Type, localPackage)
 				group.Id(varName).Add(varType).Tag(map[string]string{
 					"json": jsonName,
 					"yaml": yamlName,
@@ -96,17 +96,17 @@ func (pg *ParamsGen) handleFunction(file *ast.File, fd *ast.FuncDecl, localPacka
 		}
 	}).Line()
 
-	appType := getVarType(file, fd.Recv.List[0].Type, localPackage)
+	appType := TypeDefinition(file, fd.Recv.List[0].Type, localPackage)
 
 	var retTypes []jen.Code
 	if fd.Type.Results != nil {
 		for _, ret := range fd.Type.Results.List {
 			if len(ret.Names) > 0 {
 				for _, name := range ret.Names {
-					retTypes = append(retTypes, jen.Id(name.Name).Add(getVarType(file, ret.Type, localPackage)))
+					retTypes = append(retTypes, jen.Id(name.Name).Add(TypeDefinition(file, ret.Type, localPackage)))
 				}
 			} else {
-				retTypes = append(retTypes, getVarType(file, ret.Type, localPackage))
+				retTypes = append(retTypes, TypeDefinition(file, ret.Type, localPackage))
 			}
 		}
 	}
@@ -149,23 +149,23 @@ func (pg *ParamsGen) isStructType(expr ast.Expr) bool {
 	return false
 }
 
-func getVarType(file *ast.File, expr ast.Expr, localPackage string) *jen.Statement {
-	if v, ok := expr.(*ast.Ident); ok {
+func TypeDefinition(file *ast.File, typeDef ast.Expr, localPackage string) *jen.Statement {
+	if v, ok := typeDef.(*ast.Ident); ok {
 		if isBuiltin(v.Name) {
 			return jen.Id(v.Name)
 		}
 		return jen.Qual(localPackage, v.Name)
 	}
-	if ref, ok := expr.(*ast.StarExpr); ok {
-		return jen.Op("*").Add(getVarType(file, ref.X, localPackage))
+	if ref, ok := typeDef.(*ast.StarExpr); ok {
+		return jen.Op("*").Add(TypeDefinition(file, ref.X, localPackage))
 	}
-	if arr, ok := expr.(*ast.ArrayType); ok {
-		return jen.Index().Add(getVarType(file, arr.Elt, localPackage))
+	if arr, ok := typeDef.(*ast.ArrayType); ok {
+		return jen.Index().Add(TypeDefinition(file, arr.Elt, localPackage))
 	}
-	if mp, ok := expr.(*ast.MapType); ok {
-		return jen.Map(getVarType(file, mp.Key, localPackage)).Add(getVarType(file, mp.Value, localPackage))
+	if mp, ok := typeDef.(*ast.MapType); ok {
+		return jen.Map(TypeDefinition(file, mp.Key, localPackage)).Add(TypeDefinition(file, mp.Value, localPackage))
 	}
-	if selector, ok := expr.(*ast.SelectorExpr); ok {
+	if selector, ok := typeDef.(*ast.SelectorExpr); ok {
 		return jen.Qual(findImportPath(file, selector.X.(*ast.Ident).Name), selector.Sel.Name)
 	}
 	return jen.Empty()
