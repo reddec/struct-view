@@ -26,12 +26,26 @@ type EventGenerator struct {
 	Hints          map[string]string // Event->Struct Name
 }
 
-func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
+type Event struct {
+	Name     string
+	TypeName string
+	Dir      string
+}
+
+type EventGeneratorResult struct {
+	Events []Event
+	Code   jen.Code
+}
+
+func (eg EventGenerator) Generate(directories ...string) (*EventGeneratorResult, error) {
 	var (
 		events   []string
 		types    []string
 		payloads []*Struct
 	)
+
+	var usedEvents []Event
+
 	code := jen.Empty()
 	for _, directory := range directories {
 		fs := token.NewFileSet()
@@ -94,6 +108,12 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 						events = append(events, eventName)
 						types = append(types, typeName)
 						payloads = append(payloads, &cp)
+
+						usedEvents = append(usedEvents, Event{
+							Name:     eventName,
+							TypeName: cp.Struct,
+							Dir:      cp.Dir,
+						})
 					}
 
 					comment = ""
@@ -127,7 +147,10 @@ func (eg EventGenerator) Generate(directories ...string) (jen.Code, error) {
 		code.Add(eg.generateListener(eg.BusName, events, payloads))
 		code.Add(jen.Line())
 	}
-	return code, nil
+	return &EventGeneratorResult{
+		Events: usedEvents,
+		Code:   code,
+	}, nil
 }
 
 func (eg EventGenerator) emitFunc() string {

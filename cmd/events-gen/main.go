@@ -4,6 +4,8 @@ import (
 	"github.com/dave/jennifer/jen"
 	"github.com/jessevdk/go-flags"
 	structview "github.com/reddec/struct-view"
+	"github.com/reddec/struct-view/cmd/events-gen/internal"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,6 +25,7 @@ type Config struct {
 	Listener       string            `short:"l" long:"listener" env:"LISTENER" description:"Create method to subscribe for all events" default:"SubscribeAll"`
 	Hint           map[string]string `short:"H" long:"hint" env:"HINT" description:"Give a hint about events (eventName -> struct name)"`
 	Context        bool              `short:"c" long:"context" env:"CONTEXT" description:"Add context to events"`
+	TS             string            `long:"ts" env:"TS" description:"Generate TypeScript supporting file"`
 	Args           struct {
 		Directories []string `help:"source directories (by default - current)"`
 	} `positional-args:"yes"`
@@ -67,11 +70,11 @@ func main() {
 		Listener:       config.Listener,
 		PrivateEmit:    config.PrivateEmitter,
 	}
-	code, err := ev.Generate(config.Args.Directories...)
+	result, err := ev.Generate(config.Args.Directories...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	out.Add(code)
+	out.Add(result.Code)
 	var output = os.Stdout
 	if config.Output != "-" {
 		output, err = os.Create(config.Output)
@@ -83,5 +86,11 @@ func main() {
 	err = out.Render(output)
 	if err != nil {
 		panic(err)
+	}
+	if config.TS != "" {
+		err = ioutil.WriteFile(config.TS, []byte(internal.GenerateTS(result)), 0755)
+		if err != nil {
+			panic(err)
+		}
 	}
 }

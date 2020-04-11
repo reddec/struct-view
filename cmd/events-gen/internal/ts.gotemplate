@@ -1,0 +1,15 @@
+namespace EventTypes {
+    {{range definitions}}
+    export interface {{.TypeName}} {
+        {{- range .StructFields}}
+        {{.Tag}}: {{. | typescript}}
+        {{- end}}
+    }
+    {{end}}
+}
+
+export interface Events {
+    {{range .Events}}
+    on{{.Name}}(handler: (payload:EventTypes.{{.TypeName}})=>(void));
+    {{end}}
+}
