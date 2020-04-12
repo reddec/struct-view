@@ -1,15 +1,13 @@
-namespace EventTypes {
-    {{range definitions}}
-    export interface {{.TypeName}} {
-        {{- range .StructFields}}
-        {{.Tag}}: {{. | typescript}}
-        {{- end}}
-    }
-    {{end}}
+{{range definitions}}
+export interface {{.TypeName}} {
+    {{- range .StructFields}}
+    {{.Tag}}: {{. | typescript}}
+    {{- end}}
 }
+{{end}}
 
 export type EventName = {{range $index, $ev := .Events}}{{if gt $index 0}} | {{end}}'{{$ev.Name}}'{{end}};
-export type EventPayload = {{range $index, $ev := definitions}}{{if gt $index 0}} | {{end}}EventTypes.{{$ev.TypeName}}{{end}};
+export type EventPayload = {{range $index, $ev := definitions}}{{if gt $index 0}} | {{end}}{{$ev.TypeName}}{{end}};
 export type EventHandler = ((payload: EventPayload, event: EventName) => (void)) | ((payload: EventPayload) => (void))
 
 export class Events {
@@ -29,11 +27,11 @@ export class Events {
     }
 
 {{range .Events}}
-    on{{.Name}}(handler: ((payload: EventTypes.{{.TypeName}}) => (void)) | ((payload: EventTypes.{{.TypeName}}, event: EventName) => (void))) {
+    on{{.Name}}(handler: ((payload: {{.TypeName}}) => (void)) | ((payload: {{.TypeName}}, event: EventName) => (void))) {
         this.listeners.set('{{.Name}}', handler as EventHandler);
     }
 
-    off{{.Name}}(handler: ((payload: EventTypes.{{.TypeName}}) => (void)) | ((payload: EventTypes.{{.TypeName}}, event: EventName) => (void))) {
+    off{{.Name}}(handler: ((payload: {{.TypeName}}) => (void)) | ((payload: {{.TypeName}}, event: EventName) => (void))) {
         this.listeners.delete('{{.Name}}');
     }
 
