@@ -8,8 +8,70 @@ namespace EventTypes {
     {{end}}
 }
 
-export interface Events {
-    {{range .Events}}
-    on{{.Name}}(handler: (payload:EventTypes.{{.TypeName}})=>(void));
-    {{end}}
+export type EventName = {{range $index, $ev := .Events}}{{if gt $index 0}} | {{end}}'{{$ev.Name}}'{{end}};
+export type EventPayload = {{range $index, $ev := definitions}}{{if gt $index 0}} | {{end}}EventTypes.{{$ev.TypeName}}{{end}};
+export type EventHandler = ((payload: EventPayload, event: EventName) => (void)) | ((payload: EventPayload) => (void))
+
+export class Events {
+    private stopped = false;
+    private readonly listeners = new Map<EventName, EventHandler>();
+
+    constructor(private readonly url: string, private readonly reconnectInterval: number = 1000) {
+        this.start();
+    }
+
+    on(event: EventName, handler: EventHandler) {
+        this.listeners.set(event, handler)
+    }
+
+    off(event: EventName, handler: EventHandler) {
+        this.listeners.delete(event)
+    }
+
+{{range .Events}}
+    on{{.Name}}(handler: ((payload: EventTypes.{{.TypeName}}) => (void)) | ((payload: EventTypes.{{.TypeName}}, event: EventName) => (void))) {
+        this.listeners.set('{{.Name}}', handler as EventHandler);
+    }
+
+    off{{.Name}}(handler: ((payload: EventTypes.{{.TypeName}}) => (void)) | ((payload: EventTypes.{{.TypeName}}, event: EventName) => (void))) {
+        this.listeners.delete('{{.Name}}');
+    }
+
+{{end}}
+
+    stop() {
+        this.stopped = true;
+    }
+
+    private start() {
+        if (this.stopped) return;
+        let restarted = false;
+        const socket = new WebSocket(this.url);
+        socket.onclose = () => {
+            if (!restarted) {
+                restarted = true;
+                setInterval(() => this.start(), this.reconnectInterval);
+            }
+        }
+        socket.onerror = (e) => {
+            console.error(e);
+            if (!restarted) {
+                restarted = true;
+                socket.close();
+                setInterval(() => this.start(), this.reconnectInterval);
+            }
+        }
+        socket.onmessage = ({data}) => {
+            const {event, payload} = JSON.parse(data) as { event: string, payload: any };
+            const handler = this.listeners.get(event as EventName);
+            if (handler) {
+                try{
+                    handler(payload, event as EventName);
+                } catch(e) {
+                    console.error(`failed to process handler for event ${event}:`, e);
+                }
+            }
+        }
+    }
+
 }
