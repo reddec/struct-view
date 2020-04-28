@@ -563,6 +563,7 @@ Classical fixed-buffer circle (ring) container, where new data overwrites old on
 
 Complexity
 
+|          |       |
 |----------|-------|
 | Add      |  O(1) |
 | Get      |  O(1) |
