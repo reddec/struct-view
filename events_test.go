@@ -27,7 +27,7 @@ func TestEventGenerator_Generate(t *testing.T) {
 		return
 	}
 	f := jen.NewFile("xyz")
-	f.Add(code)
+	f.Add(code.Code)
 	err = f.Render(os.Stdout)
 	if err != nil {
 		t.Error(err)

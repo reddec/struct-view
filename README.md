@@ -7,6 +7,7 @@ Installation: `go get -v github.com/reddec/struct-view/cmd/...`
 * [Timed cache](#timed-cache)
 * [Binary encoding](#binary-gen)
 * [JSON array enum generator](#json-enum-array-gen)
+* [Ring buffer generator](#ring-buffer-generator)
 * struct-view
 
 ## Events generator
@@ -553,4 +554,75 @@ Application Options:
 Help Options:
   -h, --help       Show this help message
 
+```
+
+
+## Ring buffer generator
+
+Classical fixed-buffer circle (ring) container, where new data overwrites old one. [Wikipedia](https://en.wikipedia.org/wiki/Circular_buffer).
+
+Complexity
+
+|----------|-------|
+| Add      |  O(1) |
+| Get      |  O(1) |
+| Remove   |  N/A  |
+| Copy     |  O(N) |
+
+**Example:**
+
+Generate ring buffer for `int` type
+ 
+`ring-buffer-gen -p abc -t int --name IntBuffer`
+
+will produce (implementation details omitted):
+
+```go
+package abc
+
+// New instance of ring buffer
+func NewIntBuffer(size uint) *IntBuffer {}
+
+// Wrap pre-allocated buffer to ring buffer
+func WrapIntBuffer(buffer []int) *IntBuffer {}
+
+// Ring buffer for type int
+type IntBuffer struct {
+	seq  uint64
+	data []int
+}
+
+// Add new element to the ring buffer. If buffer is full, the oldest element will be overwritten
+func (rb *IntBuffer) Add(value int) {}
+
+// Get element by index. Negative index is counting from end
+func (rb *IntBuffer) Get(index int) (ans int) {}
+
+// Length of used elements. Always in range between zero and maximum capacity
+func (rb *IntBuffer) Len() int {}
+
+// Clone of ring buffer with shallow copy of underlying buffer
+func (rb *IntBuffer) Clone() *IntBuffer {}
+
+// Flatten copy of underlying buffer. Data is always ordered in an insertion order
+func (rb *IntBuffer) Flatten() []int {}
+
+```
+
+**Usage**
+
+```
+Usage:
+  ring-buffer-gen [OPTIONS]
+
+Application Options:
+  -p, --package=      Package name (can be override by output dir) (default: enum) [$PACKAGE]
+  -o, --output=       Generated output destination (- means STDOUT) (default: -) [$OUTPUT]
+  -t, --type-name=    Type name to wrap [$TYPE_NAME]
+      --name=         Result structure name (default: RingBuffer) [$NAME]
+      --synchronized  Make collection be synchronized [$SYNCHRONIZED]
+  -i, --import=       Import for type [$IMPORT]
+
+Help Options:
+  -h, --help          Show this help message
 ```
