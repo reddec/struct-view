@@ -19,6 +19,7 @@ type Config struct {
 	TypeName    string `short:"t" long:"type-name" env:"TYPE_NAME" description:"TypeName for cache" default:"Manager"`
 	PrivateInit bool   `long:"private-init" env:"PRIVATE_INIT" description:"Private initialization"`
 	Events      bool   `short:"e" long:"events" env:"EVENTS" description:"Enable events"`
+	Expiration  bool   `short:"E" long:"expiration" env:"EXPIRATION" description:"Enable keep-alive time for cache entries"`
 }
 
 func main() {
@@ -41,13 +42,14 @@ func main() {
 		out = jen.NewFile(config.Package)
 	}
 	ev := structview.CacheGen{
-		TypeName:    config.TypeName,
-		KeyType:     config.KeyType,
-		KeyImport:   config.KeyImport,
-		ValueType:   config.ValueType,
-		ValueImport: config.ValueImport,
-		PrivateInit: config.PrivateInit,
-		WithEvents:  config.Events,
+		TypeName:       config.TypeName,
+		KeyType:        config.KeyType,
+		KeyImport:      config.KeyImport,
+		ValueType:      config.ValueType,
+		ValueImport:    config.ValueImport,
+		PrivateInit:    config.PrivateInit,
+		WithEvents:     config.Events,
+		WithExpiration: config.Expiration,
 	}
 	code := ev.Generate()
 	out.Add(code)

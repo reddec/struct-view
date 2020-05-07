@@ -3,13 +3,14 @@ package structview
 import "github.com/dave/jennifer/jen"
 
 type CacheGen struct {
-	TypeName    string
-	KeyType     string
-	KeyImport   string
-	ValueType   string
-	ValueImport string
-	PrivateInit bool
-	WithEvents  bool
+	TypeName       string
+	KeyType        string
+	KeyImport      string
+	ValueType      string
+	ValueImport    string
+	PrivateInit    bool
+	WithEvents     bool
+	WithExpiration bool
 }
 
 func (cc *CacheGen) UpdaterType() string { return "Updater" + cc.TypeName }
@@ -54,16 +55,34 @@ func (cc *CacheGen) generateManager() jen.Code {
 	if cc.PrivateInit {
 		prefix = "new"
 	}
-	code := jen.Func().Id(prefix + cc.TypeName + "Func").Params(jen.Id("updateFunc").Id(cc.UpdaterType() + "Func")).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
-		group.Return().Id(prefix + cc.TypeName).Call(jen.Id("updateFunc"))
+	code := jen.Func().Id(prefix + cc.TypeName + "Func").ParamsFunc(func(params *jen.Group) {
+		if cc.WithExpiration {
+			params.Id("keepAlive").Qual("time", "Duration")
+		}
+		params.Id("updateFunc").Id(cc.UpdaterType() + "Func")
+	}).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+		group.Return().Id(prefix + cc.TypeName).CallFunc(func(call *jen.Group) {
+			if cc.WithExpiration {
+				call.Id("keepAlive")
+			}
+			call.Id("updateFunc")
+		})
 	}).Line()
 
-	code = code.Line().Func().Id(prefix + cc.TypeName).Params(jen.Id("updater").Id(cc.UpdaterType())).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
+	code = code.Line().Func().Id(prefix + cc.TypeName).ParamsFunc(func(params *jen.Group) {
+		if cc.WithExpiration {
+			params.Id("keepAlive").Qual("time", "Duration")
+		}
+		params.Id("updater").Id(cc.UpdaterType())
+	}).Op("*").Id(cc.TypeName).BlockFunc(func(group *jen.Group) {
 		group.ReturnFunc(func(ret *jen.Group) {
-			ret.Op("&").Id(cc.TypeName).Values(
-				jen.Id("cache").Op(":").Make(jen.Map(cc.Key()).Add(jen.Op("*").Id(cc.CacheType()))),
-				jen.Id("updater").Op(":").Id("updater"),
-			)
+			ret.Op("&").Id(cc.TypeName).ValuesFunc(func(values *jen.Group) {
+				values.Id("cache").Op(":").Make(jen.Map(cc.Key()).Add(jen.Op("*").Id(cc.CacheType())))
+				values.Id("updater").Op(":").Id("updater")
+				if cc.WithExpiration {
+					values.Id("keepAlive").Op(":").Id("keepAlive")
+				}
+			})
 		})
 	}).Line()
 
@@ -73,6 +92,9 @@ func (cc *CacheGen) generateManager() jen.Code {
 		group.Id("updater").Id(cc.UpdaterType())
 		if cc.WithEvents {
 			group.Id("listeners").Index().Id(cc.EventType())
+		}
+		if cc.WithExpiration {
+			group.Id("keepAlive").Qual("time", "Duration")
 		}
 	}).Line()
 
@@ -101,6 +123,9 @@ func (cc *CacheGen) generateManager() jen.Code {
 			values.Id("updater").Op(":").Id("mgr").Dot("updater")
 			if cc.WithEvents {
 				values.Id("store").Op(":").Id("mgr")
+			}
+			if cc.WithExpiration {
+				values.Id("keepAlive").Op(":").Id("mgr").Dot("keepAlive")
 			}
 		})
 		group.Id("mgr").Dot("cache").Index(jen.Id("key")).Op("=").Id("entry")
@@ -225,10 +250,18 @@ func (cc *CacheGen) generateCacheNode() jen.Code {
 		if cc.WithEvents {
 			group.Id("store").Op("*").Id(cc.TypeName)
 		}
+		if cc.WithExpiration {
+			group.Id("updatedAt").Qual("time", "Time")
+			group.Id("keepAlive").Qual("time", "Duration")
+		}
 	}).Line()
 
 	code = code.Line().Func().Params(jen.Id("cache").Op("*").Id(cc.CacheType())).Id("Valid").Params().Bool().BlockFunc(func(group *jen.Group) {
-		group.Return().Id("cache").Dot("valid")
+		var cond = jen.Empty()
+		if cc.WithExpiration {
+			cond = jen.Op("&&").Qual("time", "Now").Call().Dot("Sub").Call(jen.Id("cache").Dot("updatedAt")).Op("<").Id("cache").Dot("keepAlive")
+		}
+		group.Return().Id("cache").Dot("valid").Add(cond)
 	}).Line()
 
 	code = code.Line().Func().Params(jen.Id("cache").Op("*").Id(cc.CacheType())).Id("Invalidate").Params().BlockFunc(func(group *jen.Group) {
@@ -257,6 +290,9 @@ func (cc *CacheGen) generateCacheNode() jen.Code {
 		group.Id("cache").Dot("lock").Dot("Lock").Call()
 		group.Id("cache").Dot("data").Op("=").Id("value")
 		group.Id("cache").Dot("valid").Op("=").True()
+		if cc.WithExpiration {
+			group.Id("cache").Dot("updatedAt").Op("=").Qual("time", "Now").Call()
+		}
 		group.Id("cache").Dot("lock").Dot("Unlock").Call()
 		if cc.WithEvents {
 			group.Id("cache").Dot("store").Dot("notify").Call(jen.Id("cache").Dot("key"), jen.Id("value"), jen.Id(cc.EventTypeName("Update")))
@@ -265,7 +301,12 @@ func (cc *CacheGen) generateCacheNode() jen.Code {
 
 	code = code.Line().Func().Params(jen.Id("cache").Op("*").Id(cc.CacheType())).Id("Update").Params(jen.Id("ctx").Qual("context", "Context"), jen.Id("force").Bool()).Error().BlockFunc(func(group *jen.Group) {
 		group.Id("cache").Dot("lock").Dot("Lock").Call()
-		group.If(jen.Id("cache").Dot("valid").Op("&&").Op("!").Id("force")).BlockFunc(func(ok *jen.Group) {
+		var cond = jen.Empty()
+		if cc.WithExpiration {
+			cond = jen.Op("&&").Qual("time", "Now").Call().Dot("Sub").Call(jen.Id("cache").Dot("updatedAt")).Op("<").Id("cache").Dot("keepAlive")
+		}
+
+		group.If(jen.Id("cache").Dot("valid").Op("&&").Op("!").Id("force").Add(cond)).BlockFunc(func(ok *jen.Group) {
 			ok.Id("cache").Dot("lock").Dot("Unlock").Call()
 			ok.Return().Nil()
 		})
@@ -277,6 +318,9 @@ func (cc *CacheGen) generateCacheNode() jen.Code {
 		})
 		group.Id("cache").Dot("data").Op("=").Id("temp")
 		group.Id("cache").Dot("valid").Op("=").True()
+		if cc.WithExpiration {
+			group.Id("cache").Dot("updatedAt").Op("=").Qual("time", "Now").Call()
+		}
 		group.Id("cache").Dot("lock").Dot("Unlock").Call()
 		if cc.WithEvents {
 			group.Id("cache").Dot("store").Dot("notify").Call(jen.Id("cache").Dot("key"), jen.Id("temp"), jen.Id(cc.EventTypeName("Update")))

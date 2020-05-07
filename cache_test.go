@@ -8,10 +8,11 @@ import (
 
 func TestCacheGen_Generate(t *testing.T) {
 	st := CacheGen{
-		TypeName:    "UserManager",
-		KeyType:     "int64",
-		ValueType:   "User",
-		ValueImport: "example.com/xyz",
+		TypeName:       "UserManager",
+		KeyType:        "int64",
+		ValueType:      "User",
+		ValueImport:    "example.com/xyz",
+		WithExpiration: true,
 	}
 	code := st.Generate()
 	f := jen.NewFile("zzz")
