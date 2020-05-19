@@ -27,6 +27,7 @@ func (ws *wsStreamer) Feed(eventName string, payload interface{}) {
 	})
 	var wg sync.WaitGroup
 	ws.feedLock.Lock()
+	defer ws.feedLock.Unlock()
 	for _, conn := range ws.writers {
 		wg.Add(1)
 		go func(conn *websocket.Conn) {
@@ -37,7 +38,6 @@ func (ws *wsStreamer) Feed(eventName string, payload interface{}) {
 			}
 		}(conn)
 	}
-	ws.feedLock.Unlock()
 	wg.Wait()
 }
 
