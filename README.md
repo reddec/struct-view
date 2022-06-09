@@ -1,6 +1,6 @@
 # Tools to manipulate with structs
 
-Installation: `go get -v github.com/reddec/struct-view/cmd/...`
+Installation: `go install github.com/reddec/struct-view/cmd/...@latest`
 
 * [Events generator](#events-generator)
 * [Cache generator](#cache-generator)
@@ -624,6 +624,7 @@ Application Options:
       --name=         Result structure name (default: RingBuffer) [$NAME]
       --synchronized  Make collection be synchronized [$SYNCHRONIZED]
   -i, --import=       Import for type [$IMPORT]
+  -n, --notify        Notify events in case of updates [$NOTIFY]
 
 Help Options:
   -h, --help          Show this help message

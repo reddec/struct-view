@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/dave/jennifer/jen"
 	"github.com/jessevdk/go-flags"
 	"github.com/reddec/godetector"
 	structview "github.com/reddec/struct-view"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ type Config struct {
 	Name         string `long:"name" env:"NAME" description:"Result structure name" default:"RingBuffer"`
 	Synchronized bool   `long:"synchronized" env:"SYNCHRONIZED" description:"Make collection be synchronized"`
 	Import       string `short:"i" long:"import" env:"IMPORT" description:"Import for type"`
+	Notify       bool   `short:"n" long:"notify" env:"NOTIFY" description:"Notify events in case of updates"`
 }
 
 func main() {
@@ -43,6 +45,7 @@ func main() {
 		TypeName:     config.TypeName,
 		Import:       config.Import,
 		Synchronized: config.Synchronized,
+		Notify:       config.Notify,
 	}
 	code := ev.Generate()
 	out.Add(code)

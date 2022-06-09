@@ -7,6 +7,7 @@ type RingBuffer struct {
 	TypeName     string
 	Import       string
 	Synchronized bool
+	Notify       bool
 }
 
 func (rb *RingBuffer) Generate() jen.Code {
@@ -14,6 +15,7 @@ func (rb *RingBuffer) Generate() jen.Code {
 	out.Add(rb.generateConstructor()).Line().Line()
 	out.Add(rb.generateType()).Line().Line()
 	out.Add(rb.generateMethods())
+	out.Add(rb.generateHelpersMethods())
 	return out
 }
 
@@ -35,14 +37,22 @@ func (rb *RingBuffer) generateType() jen.Code {
 		if rb.Synchronized {
 			group.Id("lock").Qual("sync", "RWMutex")
 		}
+		if rb.Notify {
+			group.Id("updates").Chan().Struct()
+		}
 	})
 }
 
 func (rb *RingBuffer) generateConstructor() jen.Code {
 	return jen.Comment("New instance of ring buffer").Line().Func().Id("New" + rb.Name).Params(jen.Id("size").Uint()).Op("*").Id(rb.Name).BlockFunc(func(group *jen.Group) {
-		group.Return().Op("&").Id(rb.Name).Values(jen.Id("data").Op(":").Make(jen.Index().Add(rb.Qual()), jen.Id("size")))
+		group.Return().Id("Wrap" + rb.Name).Call(jen.Make(jen.Index().Add(rb.Qual()), jen.Id("size")))
 	}).Line().Line().Comment("Wrap pre-allocated buffer to ring buffer").Line().Func().Id("Wrap" + rb.Name).Params(jen.Id("buffer").Index().Add(rb.Qual())).Op("*").Id(rb.Name).BlockFunc(func(group *jen.Group) {
-		group.Return().Op("&").Id(rb.Name).Values(jen.Id("data").Op(":").Id("buffer"))
+		group.Return().Op("&").Id(rb.Name).ValuesFunc(func(values *jen.Group) {
+			values.Id("data").Op(":").Id("buffer")
+			if rb.Notify {
+				values.Id("updates").Op(":").Make(jen.Chan().Struct(), jen.Lit(1))
+			}
+		})
 	})
 }
 
@@ -55,6 +65,9 @@ func (rb *RingBuffer) generateMethods() jen.Code {
 		slot := jen.Id("rb").Dot("seq").Op("%").Uint64().Call(jen.Len(jen.Id("rb").Dot("data")))
 		method.Id("rb").Dot("data").Index(slot).Op("=").Id("value")
 		method.Id("rb").Dot("seq").Op("++")
+		if rb.Notify {
+			method.Id("rb").Dot("notify").Call()
+		}
 	})).Line().Line().Comment("Get element by index. Negative index is counting from end").Line().Add(rb.fn().Id("Get").Params(jen.Id("index").Int()).Params(jen.Id("ans").Add(rb.Qual())).BlockFunc(func(method *jen.Group) {
 		if rb.Synchronized {
 			method.Id("rb").Dot("lock").Dot("RLock").Call()
@@ -104,4 +117,20 @@ func (rb *RingBuffer) generateMethods() jen.Code {
 		method.Copy(jen.Id("cp").Index(jen.Len(jen.Id("head")), jen.Empty()), jen.Id("rb").Dot("data").Index(jen.Empty(), jen.Id("sep")))
 		method.Return().Id("cp")
 	}))
+}
+
+func (rb *RingBuffer) generateHelpersMethods() jen.Code {
+	group := jen.Empty()
+	if rb.Notify {
+		group.Line().Line().Comment("Watch for updates in buffer").Line().Add(rb.fn().Id("Watch").Params().Op("<-").Chan().Struct().BlockFunc(func(method *jen.Group) {
+			method.Return().Id("rb").Dot("updates")
+		}))
+		group.Line().Line().Add(rb.fn().Id("notify").Params().BlockFunc(func(method *jen.Group) {
+			method.Select().BlockFunc(func(opts *jen.Group) {
+				opts.Case(jen.Id("rb").Dot("updates").Op("<-").Struct().Values())
+				opts.Default()
+			})
+		}))
+	}
+	return group
 }
