@@ -3,7 +3,7 @@ module github.com/reddec/struct-view
 go 1.13
 
 require (
-	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/dave/jennifer v1.3.0
@@ -16,5 +16,6 @@ require (
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/reddec/godetector v0.0.0-20200408155538-7d64c6317cb4
-	golang.org/x/net v0.0.0-20191204025024-5ee1b9f4859a // indirect
+	github.com/stretchr/testify v1.8.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
